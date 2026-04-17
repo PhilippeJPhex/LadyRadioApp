@@ -1,0 +1,95 @@
+class MockData {
+  static const List<Map<String, dynamic>> programs = [
+    {
+      'id': 'radio-viola',
+      'title': 'Radio Viola',
+      'category': 'Sport',
+      'image': 'cover/radioviola.jpg',
+      'rssFeed': 'https://www.spreaker.com/show/6929484/episodes/feed',
+      'description': 'La trasmissione di punta di Lady Radio in compagnia della redazione sportiva, capitanata da Mario Tenerani, Duccio Mazzoni, Federico Sartoni e Niccolò...',
+      'schedule': 'Dal lunedì al venerdì alle 12:00 su Lady Radio',
+    },
+    {
+      'id': 'gr-mattino',
+      'title': 'GR del Mattino',
+      'category': 'Cronaca',
+      'image': 'cover/grdelmattino.jpg',
+      'rssFeed': 'https://www.spreaker.com/show/6927806/episodes/feed',
+      'description': 'Il buongiorno di Lady Radio agli ascoltatori con la rassegna stampa del giorno e le prime notizie da Firenze.',
+      'schedule': 'Ogni mattina alle 07:00 su Lady Radio',
+    },
+    {
+      'id': 'artemio',
+      'title': 'Artemio',
+      'category': 'Sport',
+      'image': 'cover/artemio.jpg',
+      'rssFeed': 'https://www.spreaker.com/show/6864279/episodes/feed',
+      'description': 'Il commento sportivo sul mondo viola e della Fiorentina.',
+      'schedule': 'In onda su Lady Radio',
+    },
+    {
+      'id': 'il-quotidiano-dei-quartieri',
+      'title': 'Il quotidiano dei quartieri',
+      'category': 'Cronaca',
+      'image': 'cover/quotidianodeiquartieri.jpg',
+      'rssFeed': 'https://www.spreaker.com/show/6927829/episodes/feed',
+      'description': 'Ogni giorno in diretta, il presidente di uno dei 5 quartieri di Firenze racconta le novità e risponde ai residenti.',
+      'schedule': 'In onda su Lady Radio',
+    },
+    {
+      'id': '50100-le-vie-di-firenze',
+      'title': '50100 – Le vie di Firenze',
+      'category': 'Cronaca',
+      'image': 'https://d3wo5wojvuv7l.cloudfront.net/t_rss_itunes_square_1400/images.spreaker.com/original/df20a029014a2ab1c15bd673b09ce967.jpg',
+      'rssFeed': 'https://www.spreaker.com/show/6927797/episodes/feed',
+      'description': 'Alessandro Prosperi e Andrea Puggelli ci guidano attraverso le strade di Firenze raccontandoci la storia, le curiosità ed i personaggi della nostra città.',
+      'schedule': 'In onda su Lady Radio',
+    },
+    {
+      'id': 'caffe-viola',
+      'title': 'Caffè Viola',
+      'category': 'Sport',
+      'image': 'cover/caffeviola.jpg',
+      'rssFeed': 'https://www.spreaker.com/show/6927772/episodes/feed',
+      'description': 'La sveglia del tifoso su Lady Radio',
+      'schedule': 'In onda su Lady Radio',
+    },
+    {
+      'id': 'le-bombe-delle-sei',
+      'title': 'Le bombe delle sei (non fanno male)',
+      'category': 'Sport',
+      'image': 'cover/lebombedellesei.jpg',
+      'rssFeed': 'https://www.spreaker.com/show/6927819/episodes/feed',
+      'description': 'L’energia di Andrea Vignolini e Leonardo Petri esplode in un’ora di commento in piena fascia di drive time su cosa succede in casa viola.',
+      'schedule': 'In onda su Lady Radio',
+    },
+    {
+      'id': 'prima-pagina-viola',
+      'title': 'Prima Pagina Viola',
+      'category': 'Sport',
+      'image': 'cover/primapaginaviola.jpg',
+      'rssFeed': 'https://www.spreaker.com/show/6927825/episodes/feed',
+      'description': 'Leonardo Petri vi accompagna ogni mattina con una rassegna stampa tutta dedicata alla Fiorentina.',
+      'schedule': 'In onda su Lady Radio',
+    }
+  ];
+
+  static const List<Map<String, dynamic>> episodes = [
+    {
+      'id': 101,
+      'program': 'GR del Mattino',
+      'title': 'Uso dei contanti in Italia',
+      'date': '29 Agosto 2024',
+      'duration': '25:30',
+      'image': 'https://w2.ladyradio.it/wp-content/uploads/2024/01/gr-mattino.jpg',
+    },
+    {
+      'id': 102,
+      'program': 'Radio Viola',
+      'title': 'Yadine Adli è arrivato a Firenze',
+      'date': '29 Agosto 2024',
+      'duration': '25:30',
+      'image': 'https://w2.ladyradio.it/wp-content/uploads/2024/01/radio-viola.jpg',
+    },
+  ];
+}

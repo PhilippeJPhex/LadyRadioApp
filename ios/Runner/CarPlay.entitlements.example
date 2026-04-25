@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	Enable these only after Apple grants the matching CarPlay capabilities
+	for the app identifier in Apple Developer.
+
+	iOS 14 and later audio apps:
+	<key>com.apple.developer.carplay-audio</key>
+	<true/>
+
+	iOS 13 and earlier MediaPlayer compatibility:
+	<key>com.apple.developer.playable-content</key>
+	<true/>
+	-->
+</dict>
+</plist>

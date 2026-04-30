@@ -10,8 +10,10 @@ class RssService {
       final url = feedUrl;
       final response = await http.get(
         Uri.parse(url),
-        // Aggiungiamo un User-Agent per evitare blocchi da alcuni server RSS che rifiutano chiamate server-to-server
-        headers: {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'},
+        headers: {
+          'User-Agent': 'LadyRadioApp/1.0',
+          'Referer': 'https://www.ladyradio.it/',
+        },
       );
 
       if (response.statusCode == 200) {

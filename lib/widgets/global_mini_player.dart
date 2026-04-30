@@ -39,8 +39,8 @@ class GlobalMiniPlayer extends StatelessWidget {
                 }
 
                 return Container(
-                  color: Theme.of(context).scaffoldBackgroundColor, // Forza lo sfondo uguale alla pagina
-                  padding: EdgeInsets.fromLTRB(16, 4, 16, isVisible ? 12 : 4), 
+                  color: const Color(0xFFF6F3F7),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
@@ -52,13 +52,6 @@ class GlobalMiniPlayer extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: AppTheme.primaryColor,
                           borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.primaryColor.withValues(alpha: 0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            )
-                          ],
                         ),
                         child: Row(
                           children: [

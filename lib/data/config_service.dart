@@ -47,7 +47,7 @@ class ConfigService {
     }
     
     try {
-      final response = await http.get(Uri.parse('https://ladyradio.it/stream_conf/config.json'));
+      final response = await http.get(Uri.parse('https://www.ladyradio.it/stream_conf/config.json'));
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(utf8.decode(response.bodyBytes));
         _currentConfig = AppConfig.fromJson(data);
@@ -60,7 +60,7 @@ class ConfigService {
       return AppConfig(
         streamUrl: 'https://stream4.xdevel.com/audio0s978435-2634/stream/icecast.audio',
         tvUrl: '',
-        website: 'https://ladyradio.it',
+        website: 'https://www.ladyradio.it',
         whatsapp: '393925727775',
         email: 'redazione@ladyradio.it',
         facebook: '',

@@ -13,7 +13,7 @@ class FrequenciesScreen extends StatelessWidget {
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.only(top: 40, left: 24, right: 24, bottom: 24),
+        padding: const EdgeInsets.only(top: 0, left: 24, right: 24, bottom: 0),
         child: Column(
           children: [
             Container(

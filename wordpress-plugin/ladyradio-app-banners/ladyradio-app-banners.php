@@ -249,7 +249,12 @@ class LadyRadioAppBanners
 
     public function track_impression($request)
     {
-        $banner_id = intval($request->get_param('bannerId'));
+        $params = $request->get_json_params();
+        $banner_id = isset($params['bannerId']) ? intval($params['bannerId']) : 0;
+
+        if ($banner_id <= 0) {
+            $banner_id = intval($request->get_param('bannerId'));
+        }
 
         if ($banner_id > 0 && get_post_type($banner_id) === 'lr_app_banner') {
             $current_impressions = intval(get_post_meta($banner_id, '_lr_banner_impressions', true));
@@ -262,7 +267,12 @@ class LadyRadioAppBanners
 
     public function track_click($request)
     {
-        $banner_id = intval($request->get_param('bannerId'));
+        $params = $request->get_json_params();
+        $banner_id = isset($params['bannerId']) ? intval($params['bannerId']) : 0;
+
+        if ($banner_id <= 0) {
+            $banner_id = intval($request->get_param('bannerId'));
+        }
 
         if ($banner_id > 0 && get_post_type($banner_id) === 'lr_app_banner') {
             $current_clicks = intval(get_post_meta($banner_id, '_lr_banner_clicks', true));

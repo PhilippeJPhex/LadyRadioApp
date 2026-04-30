@@ -7,7 +7,7 @@ class AppConstants {
   static const String email = 'redazione@ladyradio.it';
 
   // --- Link esterni ---
-  static const String website = 'https://ladyradio.it';
+  static const String website = 'https://www.ladyradio.it';
   static const String logoAsset = 'assets/lady512.png';
   static const String logoUrl =
       'https://www.ladyradio.it/wp-content/uploads/2024/05/Logo_Lady_Radio_Sito.png';

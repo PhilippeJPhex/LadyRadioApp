@@ -41,23 +41,7 @@ class CustomAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
   // --- LOGICA CACHE INTELLIGENTE ---
   
   Future<void> _cleanOldCache() async {
-    _player.durationStream.listen((duration) {
-      final item = mediaItem.value;
-      if (item != null && duration != null && item.duration != duration) {
-        mediaItem.add(item.copyWith(duration: duration));
-      }
-    });
 
-    _player.sequenceStateStream.listen((state) {
-      if (state == null) return;
-      final currentSource = state.currentSource;
-      if (currentSource != null && currentSource.tag is MediaItem) {
-        final item = currentSource.tag as MediaItem;
-        if (mediaItem.value?.id != item.id) {
-          mediaItem.add(item);
-        }
-      }
-    });
 
     try {
       final dir = await getTemporaryDirectory();
@@ -92,23 +76,7 @@ class CustomAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
   }
 
   Future<void> _markAsAccessed(String url) async {
-    _player.durationStream.listen((duration) {
-      final item = mediaItem.value;
-      if (item != null && duration != null && item.duration != duration) {
-        mediaItem.add(item.copyWith(duration: duration));
-      }
-    });
 
-    _player.sequenceStateStream.listen((state) {
-      if (state == null) return;
-      final currentSource = state.currentSource;
-      if (currentSource != null && currentSource.tag is MediaItem) {
-        final item = currentSource.tag as MediaItem;
-        if (mediaItem.value?.id != item.id) {
-          mediaItem.add(item);
-        }
-      }
-    });
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -117,6 +85,13 @@ class CustomAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
     } catch (e) {
       debugPrint("[Cache] Errore mark: $e");
     }
+  }
+
+  @override
+  Future<void> onTaskRemoved() async {
+    debugPrint("[AudioHandler] Task rimosso (app chiusa dalle recenti). Fermo tutto.");
+    await stop();
+    await super.onTaskRemoved();
   }
 
   // ---------------------------------
@@ -136,6 +111,23 @@ class CustomAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
   }
 
   Future<void> _init() async {
+    _player.durationStream.listen((duration) {
+      final item = mediaItem.value;
+      if (item != null && duration != null && item.duration != duration) {
+        mediaItem.add(item.copyWith(duration: duration));
+      }
+    });
+
+    _player.sequenceStateStream.listen((state) {
+      final currentSource = state.currentSource;
+      if (currentSource != null && currentSource.tag is MediaItem) {
+        final item = currentSource.tag as MediaItem;
+        if (mediaItem.value?.id != item.id) {
+          mediaItem.add(item);
+        }
+      }
+    });
+
     _player.playbackEventStream.listen((event) {
       playbackState.add(_transformEvent(event));
     });
@@ -151,23 +143,7 @@ class CustomAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
       }
     });
 
-    _player.durationStream.listen((duration) {
-      final item = mediaItem.value;
-      if (item != null && duration != null && item.duration != duration) {
-        mediaItem.add(item.copyWith(duration: duration));
-      }
-    });
 
-    _player.sequenceStateStream.listen((state) {
-      if (state == null) return;
-      final currentSource = state.currentSource;
-      if (currentSource != null && currentSource.tag is MediaItem) {
-        final item = currentSource.tag as MediaItem;
-        if (mediaItem.value?.id != item.id) {
-          mediaItem.add(item);
-        }
-      }
-    });
 
     try {
       final config = await _configService.getConfig();
@@ -293,23 +269,7 @@ class CustomAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
     } else {
       // Comportamento standard per item singolo
       mediaItem.add(item);
-      _player.durationStream.listen((duration) {
-      final item = mediaItem.value;
-      if (item != null && duration != null && item.duration != duration) {
-        mediaItem.add(item.copyWith(duration: duration));
-      }
-    });
-
-    _player.sequenceStateStream.listen((state) {
-      if (state == null) return;
-      final currentSource = state.currentSource;
-      if (currentSource != null && currentSource.tag is MediaItem) {
-        final item = currentSource.tag as MediaItem;
-        if (mediaItem.value?.id != item.id) {
-          mediaItem.add(item);
-        }
-      }
-    });
+  
 
     try {
         if (item.id == liveItemKey) {
@@ -336,8 +296,8 @@ class CustomAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
     final isLive = currentItem != null && currentItem.id == liveItemKey;
 
     // Aggiorniamo il MediaItem corrente se il player è passato al prossimo nella playlist
-    if (_player.currentIndex != null && _player.sequence != null && !isLive) {
-      final sequence = _player.sequence!;
+    if (_player.currentIndex != null && !isLive) {
+      final sequence = _player.sequence;
       if (_player.currentIndex! < sequence.length) {
         final currentSource = sequence[_player.currentIndex!];
         if (currentSource.tag is MediaItem) {
@@ -430,7 +390,9 @@ class CustomAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
           },
         ),
       ];
-      for (var item in rootItems) _itemsCache[item.id] = item;
+      for (var item in rootItems) {
+        _itemsCache[item.id] = item;
+      }
       return rootItems;
     }
 
@@ -464,23 +426,7 @@ class CustomAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
     }
     
     if (parentId == podcastFolderKey) {
-      _player.durationStream.listen((duration) {
-      final item = mediaItem.value;
-      if (item != null && duration != null && item.duration != duration) {
-        mediaItem.add(item.copyWith(duration: duration));
-      }
-    });
-
-    _player.sequenceStateStream.listen((state) {
-      if (state == null) return;
-      final currentSource = state.currentSource;
-      if (currentSource != null && currentSource.tag is MediaItem) {
-        final item = currentSource.tag as MediaItem;
-        if (mediaItem.value?.id != item.id) {
-          mediaItem.add(item);
-        }
-      }
-    });
+  
 
     try {
         final programs = await _scheduleService.fetchUniquePrograms();
@@ -508,23 +454,7 @@ class CustomAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 
     if (parentId.startsWith("PROG_")) {
       final postId = parentId.replaceFirst("PROG_", "");
-      _player.durationStream.listen((duration) {
-      final item = mediaItem.value;
-      if (item != null && duration != null && item.duration != duration) {
-        mediaItem.add(item.copyWith(duration: duration));
-      }
-    });
 
-    _player.sequenceStateStream.listen((state) {
-      if (state == null) return;
-      final currentSource = state.currentSource;
-      if (currentSource != null && currentSource.tag is MediaItem) {
-        final item = currentSource.tag as MediaItem;
-        if (mediaItem.value?.id != item.id) {
-          mediaItem.add(item);
-        }
-      }
-    });
 
     try {
         final programs = await _scheduleService.fetchUniquePrograms();

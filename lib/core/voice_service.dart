@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -9,7 +8,6 @@ import 'package:share_plus/share_plus.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 enum VoiceStatus { idle, recording, reviewing, sending, sent, cancelled, error }
 

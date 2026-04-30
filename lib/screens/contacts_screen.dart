@@ -17,7 +17,7 @@ class ContactsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SingleChildScrollView(
-        padding: const EdgeInsets.only(top: 130, left: 24, right: 24, bottom: 24),
+        padding: const EdgeInsets.only(top: 80, left: 24, right: 24, bottom: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [

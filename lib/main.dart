@@ -51,6 +51,7 @@ Future<void> _initServices() async {
         androidNotificationChannelName: 'Lady Radio Riproduzione',
         androidNotificationOngoing: true,
         androidStopForegroundOnPause: true,
+        androidResumeOnClick: false, // Impedisce il resume automatico via Bluetooth/Media buttons
       ),
     );
   } catch (e) {

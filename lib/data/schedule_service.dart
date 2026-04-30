@@ -10,22 +10,28 @@ class ScheduleService {
     final url = Uri.parse('${AppConstants.website}/wp-json/ladyapp/v1/schedule');
 
     try {
-      final response = await http.get(url);
+      final response = await http.get(
+        url,
+        headers: {
+          'User-Agent': 'LadyRadioApp/1.0',
+          'Referer': 'https://www.ladyradio.it/',
+        },
+      );
       if (response.statusCode == 200) {
         final List<dynamic> jsonList = json.decode(response.body);
         final allEntries = jsonList.map((item) {
           return {
-            'id': item['id'] ?? '',
-            'postId': item['postId'] ?? item['id'] ?? '',
-            'title': item['title'] ?? '',
-            'description': item['subtitle'] ?? '',
+            'id': item['id']?.toString() ?? '',
+            'postId': item['postId']?.toString() ?? item['id']?.toString() ?? '',
+            'title': item['title']?.toString() ?? '',
+            'description': item['subtitle']?.toString() ?? '',
             'schedule': '${item['startTime'] ?? ''} - ${item['endTime'] ?? ''}',
-            'startTime': item['startTime'] ?? '',
-            'day': item['day'] ?? '',
+            'startTime': item['startTime']?.toString() ?? '',
+            'day': item['day']?.toString() ?? '',
             'image': item['imageUrl'] != false && item['imageUrl'] != null && item['imageUrl'] != ''
-                ? item['imageUrl']
+                ? item['imageUrl'].toString()
                 : AppConstants.logoUrl,
-            'rssFeed': item['rssFeed'] ?? '',
+            'rssFeed': item['rssFeed']?.toString() ?? '',
           };
         }).toList();
 

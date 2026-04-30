@@ -4,7 +4,6 @@ import '../core/app_theme.dart';
 import '../core/app_constants.dart';
 import '../viewmodels/home_viewmodel.dart';
 import '../widgets/lady_radio_header.dart';
-import '../data/rss_service.dart';
 import '../data/favorites_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/rss_episode.dart';
@@ -52,183 +51,181 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async {
-            _viewModel.refresh();
-          },
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const LadyRadioHeader(),
-                const SizedBox(height: 16),
-                
-                // Banner Pubblicitario (Dinamico da WP)
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.0),
-                  child: CampaignBanner(),
-                ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          _viewModel.refresh();
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const LadyRadioHeader(),
+              const SizedBox(height: 16),
+              
+              // Banner Pubblicitario (Dinamico da WP)
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.0),
+                child: CampaignBanner(),
+              ),
 
-                const SizedBox(height: 16),
-                
-                // Programmi del Giorno (Orizzontale)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'IL NOSTRO PALINSESTO',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 18,
-                          color: AppTheme.primaryColor,
-                          letterSpacing: 1.2,
-                        ),
+              const SizedBox(height: 16),
+              
+              // Programmi del Giorno (Orizzontale)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'IL NOSTRO PALINSESTO',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 18,
+                        color: AppTheme.primaryColor,
+                        letterSpacing: 1.2,
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.arrow_forward_ios, size: 16, color: AppTheme.primaryColor),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const ScheduleScreen()),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.arrow_forward_ios, size: 16, color: AppTheme.primaryColor),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ScheduleScreen()),
+                        );
+                      },
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                ListenableBuilder(
-                  listenable: _viewModel,
-                  builder: (context, _) {
-                    if (_viewModel.isLoadingPrograms && _viewModel.programs.isEmpty) {
-                      return const SizedBox(
-                        height: 100,
-                        child: Center(child: CircularProgressIndicator(color: AppTheme.primaryColor)),
-                      );
-                    }
-                    if (_viewModel.programs.isEmpty) {
-                      return const Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Text('Nessun programma trovato oggi.'),
-                      );
-                    }
-                    return SizedBox(
+              ),
+              const SizedBox(height: 12),
+              ListenableBuilder(
+                listenable: _viewModel,
+                builder: (context, _) {
+                  if (_viewModel.isLoadingPrograms && _viewModel.programs.isEmpty) {
+                    return const SizedBox(
                       height: 100,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: _viewModel.programs.length,
-                        itemBuilder: (context, index) {
-                          final program = _viewModel.programs[index];
-                          return GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (_) =>
-                                        ProgramScreen(programData: program)),
-                              );
-                            },
-                            child: AnimatedOpacity(
-                              opacity: 1.0,
-                              duration: Duration(milliseconds: 300 + index * 100),
-                              child: Container(
-                                margin: const EdgeInsets.only(right: 16),
-                                padding: const EdgeInsets.all(12),
-                                width: 220,
-                                decoration: AppTheme.chipDecoration.copyWith(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: Row(
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: _buildProgramImage(program['image'], 50),
+                      child: Center(child: CircularProgressIndicator(color: AppTheme.primaryColor)),
+                    );
+                  }
+                  if (_viewModel.programs.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Text('Nessun programma trovato oggi.'),
+                    );
+                  }
+                  return SizedBox(
+                    height: 100,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: _viewModel.programs.length,
+                      itemBuilder: (context, index) {
+                        final program = _viewModel.programs[index];
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                      ProgramScreen(programData: program)),
+                            );
+                          },
+                          child: AnimatedOpacity(
+                            opacity: 1.0,
+                            duration: Duration(milliseconds: 300 + index * 100),
+                            child: Container(
+                              margin: const EdgeInsets.only(right: 16),
+                              padding: const EdgeInsets.all(12),
+                              width: 220,
+                              decoration: AppTheme.chipDecoration.copyWith(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Row(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: _buildProgramImage(program['image'], 50),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          program['title'] ?? '',
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                          program['schedule'] ?? '',
+                                          style: const TextStyle(
+                                              fontSize: 12,
+                                              color: AppTheme.textSecondary),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Text(
-                                            program['title'] ?? '',
-                                            style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 14),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          Text(
-                                            program['schedule'] ?? '',
-                                            style: const TextStyle(
-                                                fontSize: 12,
-                                                color: AppTheme.textSecondary),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
-                          );
-                        },
-                      ),
-                    );
-                  },
-                ),
-                
-                const SizedBox(height: 32),
-                
-                // Ultimi Podcast (Verticale)
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Text(
-                    'ULTIMI PODCAST',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 18,
-                      color: AppTheme.primaryColor,
-                      letterSpacing: 1.2,
+                          ),
+                        );
+                      },
                     ),
+                  );
+                },
+              ),
+              
+              const SizedBox(height: 32),
+              
+              // Ultimi Podcast (Verticale)
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.0),
+                child: Text(
+                  'ULTIMI PODCAST',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 18,
+                    color: AppTheme.primaryColor,
+                    letterSpacing: 1.2,
                   ),
                 ),
-                const SizedBox(height: 12),
-                ListenableBuilder(
-                  listenable: _viewModel,
-                  builder: (context, _) {
-                    if (_viewModel.isLoadingEpisodes && _viewModel.latestEpisodes.isEmpty) {
-                      return const Padding(
-                        padding: EdgeInsets.all(32.0),
-                        child: Center(child: CircularProgressIndicator(color: AppTheme.primaryColor)),
-                      );
-                    }
-                    if (_viewModel.latestEpisodes.isEmpty) {
-                      return const Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Text('Nessun podcast recente.'),
-                      );
-                    }
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Column(
-                        children: _viewModel.latestEpisodes
-                            .map((ep) => _buildEpisodeCard(context, ep))
-                            .toList(),
-                      ),
+              ),
+              const SizedBox(height: 12),
+              ListenableBuilder(
+                listenable: _viewModel,
+                builder: (context, _) {
+                  if (_viewModel.isLoadingEpisodes && _viewModel.latestEpisodes.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.all(32.0),
+                      child: Center(child: CircularProgressIndicator(color: AppTheme.primaryColor)),
                     );
-                  },
-                ),
-                const SizedBox(height: 100), // Spazio per il mini player
-              ],
-            ),
+                  }
+                  if (_viewModel.latestEpisodes.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Text('Nessun podcast recente.'),
+                    );
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      children: _viewModel.latestEpisodes
+                          .map((ep) => _buildEpisodeCard(context, ep))
+                          .toList(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 100), // Spazio per il mini player
+            ],
           ),
         ),
       ),

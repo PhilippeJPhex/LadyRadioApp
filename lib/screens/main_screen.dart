@@ -62,43 +62,29 @@ class _MainScreenState extends State<MainScreen> {
       child: Scaffold(
         extendBody: true,
         backgroundColor: Colors.transparent,
-        body: Stack(
-          children: [
-            // Contenuto principale: ora a tutto schermo
-            IndexedStack(
-              index: _currentIndex,
-              children: List.generate(_screens.length, (index) {
-                return Navigator(
-                  key: _navigatorKeys[index],
-                  onGenerateRoute: (routeSettings) {
-                    return MaterialPageRoute(
-                      builder: (context) => _screens[index],
-                    );
-                  },
-                );
-              }),
-            ),
-            
-            // Mini Player in alto: ora posizionato sopra il contenuto
-            SafeArea(
-              bottom: false,
-              child: StreamBuilder<MediaItem?>(
-                stream: audioHandler?.mediaItem,
-                builder: (context, snapshot) {
-                  final mediaItem = snapshot.data;
-                  final bool isLive = mediaItem?.id == CustomAudioHandler.liveItemKey;
-                  final bool hasActiveItem = mediaItem != null && !isLive;
+        body: StreamBuilder<MediaItem?>(
+          stream: audioHandler?.mediaItem,
+          builder: (context, snapshot) {
+            final mediaItem = snapshot.data;
+            final bool isLive = mediaItem?.id == CustomAudioHandler.liveItemKey;
+            final bool hasActiveItem = mediaItem != null && !isLive;
 
-                  return ValueListenableBuilder<bool>(
-                    valueListenable: isPodcastScreenVisible,
-                    builder: (context, isVisible, _) {
-                      return ValueListenableBuilder<String?>(
-                        valueListenable: currentPodcastPageId,
-                        builder: (context, pageId, _) {
-                          final bool shouldHide = isVisible && pageId == mediaItem?.id;
-                          
-                          if (hasActiveItem && !shouldHide) {
-                            return GlobalMiniPlayer(
+            return ValueListenableBuilder<bool>(
+              valueListenable: isPodcastScreenVisible,
+              builder: (context, isVisible, _) {
+                return ValueListenableBuilder<String?>(
+                  valueListenable: currentPodcastPageId,
+                  builder: (context, pageId, _) {
+                    final bool shouldHide = isVisible && pageId == mediaItem?.id;
+                    final bool miniPlayerVisible = hasActiveItem && !shouldHide;
+
+                    return Column(
+                      children: [
+                        // Mini Player (Posizionato in ALTO, sopra l'header)
+                        if (miniPlayerVisible)
+                          SafeArea(
+                            bottom: false,
+                            child: GlobalMiniPlayer(
                               onTap: (mediaItem) {
                                 final dummyMap = {
                                   'program': mediaItem.album ?? 'Lady Radio',
@@ -112,17 +98,30 @@ class _MainScreenState extends State<MainScreen> {
                                   MaterialPageRoute(builder: (_) => PodcastScreen(episodeData: dummyMap))
                                 );
                               },
-                            );
-                          }
-                          return const SizedBox.shrink();
-                        },
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
+                            ),
+                          ),
+                        Expanded(
+                          child: IndexedStack(
+                            index: _currentIndex,
+                            children: List.generate(_screens.length, (index) {
+                              return Navigator(
+                                key: _navigatorKeys[index],
+                                onGenerateRoute: (routeSettings) {
+                                  return MaterialPageRoute(
+                                    builder: (context) => _screens[index],
+                                  );
+                                },
+                              );
+                            }),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+            );
+          },
         ),
         bottomNavigationBar: BottomNavBar(
           currentIndex: _currentIndex,

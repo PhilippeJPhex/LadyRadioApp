@@ -89,6 +89,9 @@ class _PodcastScreenState extends State<PodcastScreen> {
       // Sincronizzazione UI con il cambio traccia nel service
       _itemSub = h.mediaItem.listen((item) {
         if (item != null && mounted) {
+          // SE SIAMO PASSATI ALLA DIRETTA, NON AGGIORNARE LA SCHERMATA PODCAST CON I DATI LIVE
+          if (item.id == CustomAudioHandler.liveItemKey) return;
+          
           setState(() {
             _currentEpisode = {
               'audioUrl': item.id,
@@ -240,7 +243,7 @@ class _PodcastScreenState extends State<PodcastScreen> {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: _currentEpisode['image'].toString().startsWith('http')
+                        child: (_currentEpisode['image'] != null && _currentEpisode['image'].toString().startsWith('http'))
                             ? CachedNetworkImage(
                                 imageUrl: _currentEpisode['image'],
                                 fit: BoxFit.contain,
@@ -248,7 +251,7 @@ class _PodcastScreenState extends State<PodcastScreen> {
                                 errorWidget: (context, url, error) => Image.asset('assets/lady512.png'),
                               )
                             : Image.asset(
-                                _currentEpisode['image'],
+                                _currentEpisode['image'] ?? 'assets/lady512.png',
                                 fit: BoxFit.contain,
                                 errorBuilder: (context, error, stackTrace) => Image.asset('assets/lady512.png'),
                               ),

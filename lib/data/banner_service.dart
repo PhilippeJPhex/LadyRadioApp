@@ -24,7 +24,7 @@ class CampaignBannerModel {
 }
 
 class BannerService {
-  static const String _baseUrl = 'https://ladyradio.it/wp-json/ladyapp/v1';
+  static const String _baseUrl = 'https://www.ladyradio.it/wp-json/ladyapp/v1';
 
   /// Chiama GET /api/active-banner
   /// Ritorna il banner valido per data, o null se non ce ne sono
@@ -33,7 +33,14 @@ class BannerService {
       final apiUrl = '$_baseUrl/active-banner';
       final uri = Uri.parse(apiUrl);
 
-      final response = await http.get(uri);
+      final response = await http.get(
+        uri,
+        headers: {
+          'User-Agent': 'LadyRadioApp/1.0',
+          'Referer': 'https://www.ladyradio.it/',
+          'Accept': 'application/json',
+        },
+      );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);

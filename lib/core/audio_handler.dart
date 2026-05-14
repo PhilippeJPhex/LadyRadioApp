@@ -273,6 +273,13 @@ class CustomAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 
     try {
         if (item.id == liveItemKey) {
+          final liveItem = item.copyWith(
+            title: 'Lady Radio Live',
+            album: 'Lady Radio',
+            artUri: ladyLogoUri,
+          );
+          await _player.stop();
+          mediaItem.add(liveItem);
           final config = await _configService.getConfig();
           await _player.setAudioSource(AudioSource.uri(Uri.parse(config.streamUrl)));
         } else {

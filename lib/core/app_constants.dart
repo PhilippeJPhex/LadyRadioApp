@@ -24,7 +24,7 @@ class AppConstants {
   static const List<Map<String, String>> frequencies = [
     {'area': 'Firenze, Prato e Pistoia', 'freq': '102.1 FM'},
     {'area': 'Mugello', 'freq': '95.4 FM'},
-    {'area': 'Valdisieve', 'freq': '92.2 e 95.6 FM'},
+    {'area': 'Valdisieve', 'freq': '95.6 FM'},
   ];
 
   // --- Testi UI ---

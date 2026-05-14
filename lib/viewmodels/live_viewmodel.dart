@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:audio_service/audio_service.dart';
 import '../main.dart'; // import audioHandler
 import '../core/audio_handler.dart';
+import '../widgets/global_mini_player.dart';
 
 class LiveViewModel extends ChangeNotifier {
   bool _isPlaying = false;
@@ -36,20 +37,13 @@ class LiveViewModel extends ChangeNotifier {
         if (_isDisposed) return;
         if (item != null && item.id == CustomAudioHandler.liveItemKey) {
           _songTitle = item.title;
-          notifyListeners();
         }
+        _syncPlaybackState(h);
       });
 
       _stateSub = h.playbackState.listen((state) {
         if (_isDisposed) return;
-        
-        // Verifica se l'ID corrente è effettivamente la diretta
-        final currentId = h.mediaItem.value?.id;
-        _isPlaying = state.playing && currentId == CustomAudioHandler.liveItemKey;
-
-        _isLoading = state.processingState == AudioProcessingState.loading ||
-            state.processingState == AudioProcessingState.buffering;
-        notifyListeners();
+        _syncPlaybackState(h, state);
       });
 
       if (!_isDisposed) {
@@ -65,21 +59,29 @@ class LiveViewModel extends ChangeNotifier {
     }
   }
 
+  void _syncPlaybackState(AudioHandler h, [PlaybackState? state]) {
+    final playbackState = state ?? h.playbackState.value;
+    final currentId = h.mediaItem.value?.id;
+    _isPlaying = playbackState.playing && currentId == CustomAudioHandler.liveItemKey;
+    _isLoading = currentId == CustomAudioHandler.liveItemKey &&
+        (playbackState.processingState == AudioProcessingState.loading ||
+            playbackState.processingState == AudioProcessingState.buffering);
+    notifyListeners();
+  }
+
   Future<void> togglePlayPause(bool isWindows) async {
     if (audioHandler == null) return;
     final AudioHandler h = audioHandler!;
+    final isLiveCurrent = h.mediaItem.value?.id == CustomAudioHandler.liveItemKey;
+    final isLivePlaying = isLiveCurrent && h.playbackState.value.playing;
 
     // Feedback immediato per l'icona
-    _isPlaying = !_isPlaying;
-    if (_isPlaying) {
-      _isLoading = true;
-    } else {
-      _isLoading = false;
-    }
+    _isPlaying = !isLivePlaying;
+    _isLoading = _isPlaying;
     notifyListeners();
 
     try {
-      if (_isPlaying) {
+      if (!isLivePlaying) {
         if (isWindows) {
           debugPrint('Audio disabilitato su Windows — crash MediaFoundation prevenuto.');
           _isLoading = false;
@@ -89,12 +91,25 @@ class LiveViewModel extends ChangeNotifier {
           return;
         }
 
+        isPodcastScreenVisible.value = false;
+        currentPodcastPageId.value = null;
+
         // Se l'audio era già in pausa ma avevamo già la sorgente caricata, 
         // forse non serve ricaricare l'intera URL se non è passato troppo tempo.
         // Ma per il live streaming è meglio ricaricare per evitare delay infiniti del buffer.
         await h.playFromMediaId(CustomAudioHandler.liveItemKey);
+        if (!_isDisposed) {
+          _isPlaying = true;
+          _isLoading = false;
+          notifyListeners();
+        }
       } else {
         await h.pause(); // Usa pause() invece di stop() per velocizzare la ripresa se possibile
+        if (!_isDisposed) {
+          _isPlaying = false;
+          _isLoading = false;
+          notifyListeners();
+        }
       }
     } catch (e) {
       debugPrint('LiveViewModel play error: $e');

@@ -34,17 +34,18 @@ class _CampaignBannerState extends State<CampaignBanner> {
 
   void _onBannerTap() async {
     if (_activeBanner == null) return;
-    
+
     // 1. Traccia il click sul database interno (mini-gestionale WP)
     await _bannerService.trackClick(_activeBanner!.id);
 
     // 2. Prepara l'URL con i tag di tracciamento (UTM) per il cliente
     String originalUrl = _activeBanner!.targetUrl;
     String taggedUrl = originalUrl;
-    
+
     // Aggiungiamo i parametri UTM per far capire al cliente che il traffico viene dall'app
-    const String utmTags = "utm_source=ladyradio_app&utm_medium=banner&utm_campaign=app_advertising";
-    
+    const String utmTags =
+        "utm_source=ladyradio_app&utm_medium=banner&utm_campaign=app_advertising";
+
     if (originalUrl.contains('?')) {
       taggedUrl = "$originalUrl&$utmTags";
     } else {
@@ -89,7 +90,8 @@ class _CampaignBannerState extends State<CampaignBanner> {
             imageUrl: _activeBanner!.imageUrl,
             httpHeaders: const {'Referer': 'https://www.ladyradio.it/'},
             fit: BoxFit.contain,
-            placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+            placeholder: (context, url) =>
+                const Center(child: CircularProgressIndicator()),
             imageBuilder: (context, imageProvider) {
               if (!_hasTrackedImpression) {
                 _hasTrackedImpression = true;

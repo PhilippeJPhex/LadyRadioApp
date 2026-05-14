@@ -45,8 +45,11 @@ class _PodcastScreenState extends State<PodcastScreen> {
   }
 
   void _updatePageRefs() {
-    currentPodcastPageId.value = _currentEpisode['audioUrl'];
-    isPodcastScreenVisible.value = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      currentPodcastPageId.value = _currentEpisode['audioUrl'];
+      isPodcastScreenVisible.value = true;
+    });
   }
 
   bool _playerPlayingAnywhere() {

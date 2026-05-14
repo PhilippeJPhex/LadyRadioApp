@@ -8,6 +8,7 @@ private struct CarPlayProgram {
   let title: String
   let category: String
   let feedURL: URL
+  let artwork: String?
 }
 
 private struct CarPlayEpisode {
@@ -15,6 +16,8 @@ private struct CarPlayEpisode {
   let program: String
   let audioURL: URL
   let detail: String?
+  let artwork: String?
+  let isLiveStream: Bool
 }
 
 private final class CarPlayAudioController {
@@ -34,7 +37,9 @@ private final class CarPlayAudioController {
         title: "Lady Radio Live",
         program: "Lady Radio",
         audioURL: url,
-        detail: "Diretta"
+        detail: "Diretta",
+        artwork: "assets/lady512.png",
+        isLiveStream: true
       )
       self?.play(episode)
     }
@@ -100,12 +105,75 @@ private final class CarPlayAudioController {
   private func updateNowPlaying(isPlaying: Bool) {
     guard let currentEpisode else { return }
 
-    MPNowPlayingInfoCenter.default().nowPlayingInfo = [
+    var nowPlayingInfo: [String: Any] = [
       MPMediaItemPropertyTitle: currentEpisode.title,
       MPMediaItemPropertyArtist: currentEpisode.program,
-      MPNowPlayingInfoPropertyIsLiveStream: currentEpisode.program == "Lady Radio",
+      MPNowPlayingInfoPropertyIsLiveStream: currentEpisode.isLiveStream,
       MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0
     ]
+
+    MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+
+    let episode = currentEpisode
+
+    loadArtwork(for: episode) { [weak self] artwork in
+      guard
+        let self,
+        let latestEpisode = self.currentEpisode,
+        latestEpisode.audioURL == episode.audioURL,
+        let artwork
+      else {
+        return
+      }
+
+      nowPlayingInfo[MPMediaItemPropertyArtwork] = artwork
+      MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+    }
+  }
+
+  private func loadArtwork(for episode: CarPlayEpisode, completion: @escaping (MPMediaItemArtwork?) -> Void) {
+    guard let artworkSource = episode.artwork, !artworkSource.isEmpty else {
+      completion(nil)
+      return
+    }
+
+    if artworkSource.hasPrefix("http"), let url = URL(string: artworkSource) {
+      URLSession.shared.dataTask(with: url) { data, _, _ in
+        guard let data, let image = UIImage(data: data) else {
+          completion(nil)
+          return
+        }
+
+        completion(self.makeMediaArtwork(from: image))
+      }.resume()
+      return
+    }
+
+    guard let image = loadFlutterAssetImage(named: artworkSource) else {
+      completion(nil)
+      return
+    }
+
+    completion(makeMediaArtwork(from: image))
+  }
+
+  private func makeMediaArtwork(from image: UIImage) -> MPMediaItemArtwork {
+    MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+  }
+
+  private func loadFlutterAssetImage(named assetPath: String) -> UIImage? {
+    let candidates = [
+      Bundle.main.bundleURL.appendingPathComponent("Frameworks/App.framework/flutter_assets/\(assetPath)").path,
+      Bundle.main.bundleURL.appendingPathComponent(assetPath).path
+    ]
+
+    for path in candidates {
+      if let image = UIImage(contentsOfFile: path) {
+        return image
+      }
+    }
+
+    return nil
   }
 }
 
@@ -114,14 +182,14 @@ private final class CarPlayDataService {
   static let configURL = URL(string: "https://ladyradio.it/stream_conf/config.json")!
 
   static let programs: [CarPlayProgram] = [
-    CarPlayProgram(title: "Radio Viola", category: "Sport", feedURL: URL(string: "https://www.spreaker.com/show/6929484/episodes/feed")!),
-    CarPlayProgram(title: "GR del Mattino", category: "Cronaca", feedURL: URL(string: "https://www.spreaker.com/show/6927806/episodes/feed")!),
-    CarPlayProgram(title: "Artemio", category: "Sport", feedURL: URL(string: "https://www.spreaker.com/show/6864279/episodes/feed")!),
-    CarPlayProgram(title: "Il quotidiano dei quartieri", category: "Cronaca", feedURL: URL(string: "https://www.spreaker.com/show/6927829/episodes/feed")!),
-    CarPlayProgram(title: "50100 - Le vie di Firenze", category: "Cronaca", feedURL: URL(string: "https://www.spreaker.com/show/6927797/episodes/feed")!),
-    CarPlayProgram(title: "Caffe Viola", category: "Sport", feedURL: URL(string: "https://www.spreaker.com/show/6927772/episodes/feed")!),
-    CarPlayProgram(title: "Le bombe delle sei", category: "Sport", feedURL: URL(string: "https://www.spreaker.com/show/6927819/episodes/feed")!),
-    CarPlayProgram(title: "Prima Pagina Viola", category: "Sport", feedURL: URL(string: "https://www.spreaker.com/show/6927825/episodes/feed")!)
+    CarPlayProgram(title: "Radio Viola", category: "Sport", feedURL: URL(string: "https://www.spreaker.com/show/6929484/episodes/feed")!, artwork: "cover/radioviola.jpg"),
+    CarPlayProgram(title: "GR del Mattino", category: "Cronaca", feedURL: URL(string: "https://www.spreaker.com/show/6927806/episodes/feed")!, artwork: "cover/grdelmattino.jpg"),
+    CarPlayProgram(title: "Artemio", category: "Sport", feedURL: URL(string: "https://www.spreaker.com/show/6864279/episodes/feed")!, artwork: "cover/artemio.jpg"),
+    CarPlayProgram(title: "Il quotidiano dei quartieri", category: "Cronaca", feedURL: URL(string: "https://www.spreaker.com/show/6927829/episodes/feed")!, artwork: "cover/quotidianodeiquartieri.jpg"),
+    CarPlayProgram(title: "50100 - Le vie di Firenze", category: "Cronaca", feedURL: URL(string: "https://www.spreaker.com/show/6927797/episodes/feed")!, artwork: "https://d3wo5wojvuv7l.cloudfront.net/t_rss_itunes_square_1400/images.spreaker.com/original/df20a029014a2ab1c15bd673b09ce967.jpg"),
+    CarPlayProgram(title: "Caffe Viola", category: "Sport", feedURL: URL(string: "https://www.spreaker.com/show/6927772/episodes/feed")!, artwork: "cover/caffeviola.jpg"),
+    CarPlayProgram(title: "Le bombe delle sei", category: "Sport", feedURL: URL(string: "https://www.spreaker.com/show/6927819/episodes/feed")!, artwork: "cover/lebombedellesei.jpg"),
+    CarPlayProgram(title: "Prima Pagina Viola", category: "Sport", feedURL: URL(string: "https://www.spreaker.com/show/6927825/episodes/feed")!, artwork: "cover/primapaginaviola.jpg")
   ]
 
   static func fetchLiveStreamURL(completion: @escaping (URL) -> Void) {
@@ -155,7 +223,7 @@ private final class CarPlayDataService {
         return
       }
 
-      let parser = CarPlayRSSParser(programTitle: program.title, data: data)
+      let parser = CarPlayRSSParser(programTitle: program.title, fallbackArtwork: program.artwork, data: data)
       DispatchQueue.main.async { completion(parser.parse()) }
     }.resume()
   }
@@ -185,7 +253,9 @@ private final class CarPlayDataService {
         title: item["title"] as? String ?? "Puntata",
         program: item["program"] as? String ?? item["album"] as? String ?? "Lady Radio",
         audioURL: audioURL,
-        detail: item["date"] as? String ?? item["duration"] as? String
+        detail: item["date"] as? String ?? item["duration"] as? String,
+        artwork: item["image"] as? String,
+        isLiveStream: false
       )
     }
   }
@@ -193,6 +263,7 @@ private final class CarPlayDataService {
 
 private final class CarPlayRSSParser: NSObject, XMLParserDelegate {
   private let programTitle: String
+  private let fallbackArtwork: String?
   private let parser: XMLParser
   private var episodes: [CarPlayEpisode] = []
 
@@ -202,9 +273,11 @@ private final class CarPlayRSSParser: NSObject, XMLParserDelegate {
   private var currentDate = ""
   private var currentDuration = ""
   private var currentAudioURL = ""
+  private var currentImageURL = ""
 
-  init(programTitle: String, data: Data) {
+  init(programTitle: String, fallbackArtwork: String?, data: Data) {
     self.programTitle = programTitle
+    self.fallbackArtwork = fallbackArtwork
     self.parser = XMLParser(data: data)
     super.init()
     parser.delegate = self
@@ -224,10 +297,15 @@ private final class CarPlayRSSParser: NSObject, XMLParserDelegate {
       currentDate = ""
       currentDuration = ""
       currentAudioURL = ""
+      currentImageURL = ""
     }
 
     if isInsideItem, currentElement == "enclosure", currentAudioURL.isEmpty {
       currentAudioURL = attributeDict["url"] ?? ""
+    }
+
+    if isInsideItem, currentElement == "itunes:image", currentImageURL.isEmpty {
+      currentImageURL = attributeDict["href"] ?? ""
     }
   }
 
@@ -260,7 +338,9 @@ private final class CarPlayRSSParser: NSObject, XMLParserDelegate {
             title: currentTitle,
             program: programTitle,
             audioURL: url,
-            detail: detail.isEmpty ? nil : detail
+            detail: detail.isEmpty ? nil : detail,
+            artwork: currentImageURL.isEmpty ? fallbackArtwork : currentImageURL,
+            isLiveStream: false
           )
         )
       }

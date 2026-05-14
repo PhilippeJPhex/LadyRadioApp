@@ -68,7 +68,8 @@ dev_dependencies:
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/lady512.png"
+  image_path: "assets/appicon-ladyradio.png"
+  remove_alpha_ios: true
   min_sdk_android: 21
 
 # For information on the generic Dart part of this file, see the

@@ -1,8 +1,12 @@
+import 'dart:async';
+
+import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-import 'package:webview_flutter_android/webview_flutter_android.dart';
-import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
+import 'package:flutter/services.dart';
+import 'package:video_player/video_player.dart';
 import '../core/app_theme.dart';
+import '../main.dart';
+import '../widgets/global_mini_player.dart';
 
 class VideoPlayerScreen extends StatefulWidget {
   final String videoUrl;
@@ -18,102 +22,241 @@ class VideoPlayerScreen extends StatefulWidget {
   State<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
 }
 
-class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
-  late final WebViewController _controller;
+class _VideoPlayerScreenState extends State<VideoPlayerScreen>
+    with WidgetsBindingObserver {
+  late VideoPlayerController _videoController;
+  ChewieController? _chewieController;
+  StreamSubscription? _audioPlaybackSubscription;
+  bool _videoControllerCreated = false;
   bool _isLoading = true;
+  bool _hasError = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    audioHandler?.pause();
+    _audioPlaybackSubscription = audioHandler?.playbackState.listen((state) {
+      if (state.playing &&
+          _videoControllerCreated &&
+          _videoController.value.isInitialized &&
+          _videoController.value.isPlaying) {
+        _videoController.pause();
+      }
+    });
+    _initializePlayer();
+  }
 
-    late final PlatformWebViewControllerCreationParams params;
-    if (WebViewPlatform.instance is WebKitWebViewPlatform) {
-      params = WebKitWebViewControllerCreationParams(allowsInlineMediaPlayback: true);
-    } else {
-      params = const PlatformWebViewControllerCreationParams();
-    }
+  Future<void> _initializePlayer() async {
+    try {
+      _videoController = VideoPlayerController.networkUrl(
+        Uri.parse(widget.videoUrl),
+        httpHeaders: const {
+          'User-Agent':
+              'LadyRadioApp/1.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)',
+        },
+      );
+      _videoControllerCreated = true;
 
-    _controller = WebViewController.fromPlatformCreationParams(params);
+      await _videoController.initialize();
 
-    _controller
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(Colors.black)
-      ..setUserAgent("Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36")
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageStarted: (_) => setState(() => _isLoading = true),
-          onPageFinished: (url) {
-            // 1. Inietta il viewport corretto
-            // 2. Forza TUTTI gli elementi ad adattarsi allo schermo
-            _controller.runJavaScript("""
-              var meta = document.createElement('meta');
-              meta.name = 'viewport';
-              meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
-              document.getElementsByTagName('head')[0].appendChild(meta);
-
-              var style = document.createElement('style');
-              style.innerHTML = `
-                html, body { 
-                  width: 100vw !important; 
-                  height: 100vh !important; 
-                  margin: 0 !important; 
-                  padding: 0 !important; 
-                  overflow: hidden !important; 
-                  background: black !important;
-                }
-                #player, .xdevel-player, iframe, video { 
-                  width: 100vw !important; 
-                  height: 100% !important; 
-                  position: absolute !important;
-                  top: 0 !important;
-                  left: 0 !important;
-                }
-              `;
-              document.head.appendChild(style);
-            """);
-            setState(() => _isLoading = false);
-          },
+      _chewieController = ChewieController(
+        videoPlayerController: _videoController,
+        autoPlay: true,
+        looping: false,
+        allowFullScreen: true,
+        allowMuting: true,
+        showControls: true,
+        deviceOrientationsOnEnterFullScreen: const [
+          DeviceOrientation.landscapeLeft,
+          DeviceOrientation.landscapeRight,
+        ],
+        deviceOrientationsAfterFullScreen: DeviceOrientation.values,
+        materialProgressColors: ChewieProgressColors(
+          playedColor: AppTheme.primaryColor,
+          handleColor: AppTheme.accentColor,
+          backgroundColor: Colors.white24,
+          bufferedColor: Colors.white54,
         ),
-      )
-      ..loadRequest(Uri.parse(widget.videoUrl));
+        placeholder: const ColoredBox(color: Colors.black),
+        errorBuilder: (context, errorMessage) {
+          return _buildErrorContent();
+        },
+      );
 
-    if (_controller.platform is AndroidWebViewController) {
-      (_controller.platform as AndroidWebViewController).setMediaPlaybackRequiresUserGesture(false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _syncFullScreenWithOrientation();
+        });
+      }
+    } catch (e) {
+      debugPrint('Errore player Lady TV: $e');
+      if (mounted) {
+        setState(() {
+          _hasError = true;
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _retry() async {
+    setState(() {
+      _isLoading = true;
+      _hasError = false;
+    });
+
+    if (_videoControllerCreated) {
+      await _videoController.dispose();
+      _videoControllerCreated = false;
+    }
+    _chewieController?.dispose();
+    _chewieController = null;
+    await _initializePlayer();
+  }
+
+  @override
+  void didChangeMetrics() {
+    super.didChangeMetrics();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _syncFullScreenWithOrientation();
+    });
+  }
+
+  void _syncFullScreenWithOrientation() {
+    if (!mounted) return;
+
+    final chewieController = _chewieController;
+    if (chewieController == null || _hasError || _isLoading) return;
+
+    final size = View.of(context).physicalSize;
+    final isLandscape = size.width > size.height;
+
+    if (isLandscape && !chewieController.isFullScreen) {
+      chewieController.enterFullScreen();
+    } else if (!isLandscape && chewieController.isFullScreen) {
+      chewieController.exitFullScreen();
     }
   }
 
   @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _audioPlaybackSubscription?.cancel();
+    _chewieController?.dispose();
+    if (_videoControllerCreated) {
+      _videoController.dispose();
+    }
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.manual,
+      overlays: SystemUiOverlay.values,
+    );
+    SystemChrome.setPreferredOrientations(DeviceOrientation.values);
+    super.dispose();
+  }
+
+  Widget _buildErrorContent() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.tv_off, color: Colors.white54, size: 64),
+          const SizedBox(height: 16),
+          const Text(
+            'Impossibile caricare Lady TV',
+            style: TextStyle(color: Colors.white),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(onPressed: _retry, child: const Text('Riprova')),
+        ],
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final chewieController = _chewieController;
+
     return Theme(
       data: ThemeData.dark(),
       child: Scaffold(
         backgroundColor: Colors.black,
-        appBar: AppBar(
-          title: Text(widget.title, style: const TextStyle(fontSize: 16)),
-          backgroundColor: Colors.black,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-        // Rimosso SafeArea per permettere al player di usare tutto lo spazio
-        body: Stack(
-          children: [
-            WebViewWidget(controller: _controller),
-            if (_isLoading)
-              const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+        body: GlobalMiniPlayerVisibilityBuilder(
+          builder: (context, isMiniPlayerVisible) {
+            return SafeArea(
+              top: !isMiniPlayerVisible,
+              child: Padding(
+                padding: EdgeInsets.only(top: isMiniPlayerVisible ? 10 : 0),
+                child: Stack(
                   children: [
-                    CircularProgressIndicator(color: AppTheme.primaryColor),
-                    SizedBox(height: 20),
-                    Text("Ottimizzazione Video...", 
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: SizedBox(
+                        height: kToolbarHeight,
+                        child: Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.close),
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                            Expanded(
+                              child: Text(
+                                widget.title,
+                                style: const TextStyle(fontSize: 16),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 48),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Positioned.fill(
+                      top: kToolbarHeight,
+                      child: Center(
+                        child: _hasError
+                            ? _buildErrorContent()
+                            : chewieController != null
+                            ? AspectRatio(
+                                aspectRatio: _videoController.value.aspectRatio,
+                                child: Chewie(controller: chewieController),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                    ),
+                    if (_isLoading)
+                      const Positioned.fill(
+                        top: kToolbarHeight,
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              CircularProgressIndicator(
+                                color: AppTheme.primaryColor,
+                              ),
+                              SizedBox(height: 20),
+                              Text(
+                                'Connessione alla Lady TV...',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
-          ],
+            );
+          },
         ),
       ),
     );

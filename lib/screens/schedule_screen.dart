@@ -260,9 +260,11 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                               children: _activeDayIndexes.map((dayIndex) {
                                 final programs = _scheduleByDay[dayIndex]!;
                                 return ListView.builder(
-                                  padding: const EdgeInsets.only(
+                                  padding: EdgeInsets.only(
                                     top: 10,
-                                    bottom: 40,
+                                    bottom:
+                                        112 +
+                                        MediaQuery.paddingOf(context).bottom,
                                   ),
                                   itemCount: programs.length,
                                   itemBuilder: (context, index) {

@@ -38,7 +38,7 @@ private final class CarPlayAudioController {
         program: "Lady Radio",
         audioURL: url,
         detail: "Diretta",
-        artwork: "assets/lady512.png",
+        artwork: "LadyRadioCover",
         isLiveStream: true
       )
       self?.play(episode)
@@ -162,6 +162,10 @@ private final class CarPlayAudioController {
   }
 
   private func loadFlutterAssetImage(named assetPath: String) -> UIImage? {
+    if let image = UIImage(named: assetPath) {
+      return image.withRenderingMode(.alwaysOriginal)
+    }
+
     let candidates = [
       Bundle.main.bundleURL.appendingPathComponent("Frameworks/App.framework/flutter_assets/\(assetPath)").path,
       Bundle.main.bundleURL.appendingPathComponent(assetPath).path

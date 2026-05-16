@@ -35,9 +35,19 @@ class BottomNavBar extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildNavItem(0, Icons.home_outlined, Icons.home, 'Home'),
-              _buildNavItem(1, Icons.play_circle_outline, Icons.play_circle, 'Live'),
-              _buildNavItem(2, Icons.radio_outlined, Icons.radio, 'Frequenze'),
-              _buildNavItem(3, Icons.chat_bubble_outline, Icons.chat_bubble, 'Contatti'),
+              _buildNavItem(
+                1,
+                Icons.play_circle_outline,
+                Icons.play_circle,
+                'Live',
+              ),
+              _buildNavItem(2, Icons.radio_outlined, Icons.radio, 'Ascoltaci'),
+              _buildNavItem(
+                3,
+                Icons.chat_bubble_outline,
+                Icons.chat_bubble,
+                'Contatti',
+              ),
             ],
           ),
         ),
@@ -45,7 +55,12 @@ class BottomNavBar extends StatelessWidget {
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, IconData activeIcon, String label) {
+  Widget _buildNavItem(
+    int index,
+    IconData icon,
+    IconData activeIcon,
+    String label,
+  ) {
     bool isSelected = currentIndex == index;
     return GestureDetector(
       onTap: () => onTap(index),
@@ -58,7 +73,9 @@ class BottomNavBar extends StatelessWidget {
           children: [
             Icon(
               isSelected ? activeIcon : icon,
-              color: isSelected ? AppTheme.primaryColor : AppTheme.textSecondary,
+              color: isSelected
+                  ? AppTheme.primaryColor
+                  : AppTheme.textSecondary,
               size: 26,
             ),
             const SizedBox(height: 4),

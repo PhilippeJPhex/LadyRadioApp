@@ -114,12 +114,13 @@ class SplashScreen extends StatelessWidget {
           children: [
             Image.asset(
               'assets/lady512.png',
-              width: 180,
-              height: 180,
+              width: 200,
+              height: 200,
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 48),
             const CircularProgressIndicator(
               valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+              strokeWidth: 3,
             ),
           ],
         ),

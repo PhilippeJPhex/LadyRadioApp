@@ -42,7 +42,7 @@ class ContactsScreen extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(color: AppTheme.textSecondary, height: 1.4),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
 
                 _buildActionCard(
                   context,
@@ -62,7 +62,7 @@ class ContactsScreen extends StatelessWidget {
                   subtitle: 'Scrivi una email alla redazione',
                   onTap: () => _launchUrl('mailto:${AppConstants.email}'),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
 
                 const Align(
                   alignment: Alignment.centerLeft,
@@ -75,25 +75,29 @@ class ContactsScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 _buildActionCard(
                   context,
                   title: AppConstants.phoneNumber,
                   subtitle: 'Per promuovere la tua attività',
                   onTap: () => _launchUrl('tel:${AppConstants.phoneNumber}'),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 12),
                 // Social media row
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     IconButton(
+                      padding: const EdgeInsets.all(6),
+                      constraints: const BoxConstraints(),
                       icon: const Icon(Icons.facebook_rounded, size: 32),
                       color: AppTheme.primaryColor,
                       onPressed: () => _launchUrl(AppConstants.facebookUrl),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 14),
                     IconButton(
+                      padding: const EdgeInsets.all(6),
+                      constraints: const BoxConstraints(),
                       icon: Image.asset(
                         'assets/instagram-brand.png',
                         width: 32,
@@ -102,8 +106,10 @@ class ContactsScreen extends StatelessWidget {
                       ),
                       onPressed: () => _launchUrl(AppConstants.instagramUrl),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 14),
                     IconButton(
+                      padding: const EdgeInsets.all(6),
+                      constraints: const BoxConstraints(),
                       icon: const Icon(Icons.language, size: 32),
                       color: AppTheme.primaryColor,
                       onPressed: () => _launchUrl(AppConstants.website),
@@ -111,7 +117,7 @@ class ContactsScreen extends StatelessWidget {
                   ],
                 ),
 
-                const SizedBox(height: 48),
+                const SizedBox(height: 20),
                 ElevatedButton.icon(
                   onPressed: () async {
                     const text =

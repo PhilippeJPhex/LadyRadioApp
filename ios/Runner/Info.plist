@@ -42,9 +42,9 @@
 	<key>NSAppleMusicUsageDescription</key>
 	<string>Lady Radio usa i controlli multimediali di iOS per gestire la riproduzione audio.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Lady Radio usa il microfono solo per i comandi vocali richiesti dall&apos;utente.</string>
+	<string>Lady Radio usa il microfono solo per i comandi vocali richiesti dall'utente.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Lady Radio usa il riconoscimento vocale solo per interpretare i comandi vocali richiesti dall&apos;utente.</string>
+	<string>Lady Radio usa il riconoscimento vocale solo per interpretare i comandi vocali richiesti dall'utente.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

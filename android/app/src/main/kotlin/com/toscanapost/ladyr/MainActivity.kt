@@ -1,4 +1,4 @@
-package it.ladyradio.lady_app
+package com.toscanapost.ladyr
 
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.android.FlutterActivity

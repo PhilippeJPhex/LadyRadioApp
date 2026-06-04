@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 2800">
+  <path fill="#9146FF" d="M500 0 0 500v1800h600v500l500-500h400l900-900V0H500Z"/>
+  <path fill="#FFFFFF" d="M700 200h1500v1100l-500 500h-500l-400 400v-400H700V200Z"/>
+  <path fill="#9146FF" d="M900 400h1100v800l-300 300h-500l-300 300v-300H900V400Z"/>
+  <path fill="#FFFFFF" d="M1250 650h200v600h-200V650Zm550 0h200v600h-200V650Z"/>
+</svg>

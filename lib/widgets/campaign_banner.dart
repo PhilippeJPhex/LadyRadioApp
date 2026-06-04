@@ -4,7 +4,14 @@ import 'package:url_launcher/url_launcher.dart';
 import '../data/banner_service.dart';
 
 class CampaignBanner extends StatefulWidget {
-  const CampaignBanner({super.key});
+  final BannerPosition position;
+  final bool allowFallback;
+
+  const CampaignBanner({
+    super.key,
+    this.position = BannerPosition.upper,
+    this.allowFallback = true,
+  });
 
   @override
   State<CampaignBanner> createState() => _CampaignBannerState();
@@ -24,8 +31,8 @@ class _CampaignBannerState extends State<CampaignBanner> {
 
   Future<void> _loadBanner() async {
     final banner =
-        await _bannerService.fetchActiveBanner() ??
-        _bannerService.fallbackBanner;
+        await _bannerService.fetchActiveBanner(position: widget.position) ??
+        (widget.allowFallback ? _bannerService.fallbackBanner : null);
     if (mounted) {
       setState(() {
         _activeBanner = banner;
@@ -36,6 +43,7 @@ class _CampaignBannerState extends State<CampaignBanner> {
 
   void _onBannerTap() async {
     if (_activeBanner == null) return;
+    if (_activeBanner!.targetUrl.trim().isEmpty) return;
 
     // 1. Traccia il click sul database interno (mini-gestionale WP)
     if (!_activeBanner!.isFallback) {
@@ -50,10 +58,12 @@ class _CampaignBannerState extends State<CampaignBanner> {
     const String utmTags =
         "utm_source=ladyradio_app&utm_medium=banner&utm_campaign=app_advertising";
 
-    if (originalUrl.contains('?')) {
-      taggedUrl = "$originalUrl&$utmTags";
-    } else {
-      taggedUrl = "$originalUrl?$utmTags";
+    if (originalUrl.trim().isNotEmpty) {
+      if (originalUrl.contains('?')) {
+        taggedUrl = "$originalUrl&$utmTags";
+      } else {
+        taggedUrl = "$originalUrl?$utmTags";
+      }
     }
 
     // 3. Apri il link esterno sponsorizzato
@@ -80,7 +90,7 @@ class _CampaignBannerState extends State<CampaignBanner> {
     }
 
     return GestureDetector(
-      onTap: _onBannerTap,
+      onTap: _activeBanner!.targetUrl.trim().isEmpty ? null : _onBannerTap,
       child: Container(
         height: 120, // Altezza fissa per header piccolo non invadente
         width: double.infinity,

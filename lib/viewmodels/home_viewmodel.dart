@@ -133,8 +133,8 @@ class HomeViewModel extends ChangeNotifier with WidgetsBindingObserver {
                 return 0;
               });
 
-              if (_latestEpisodes.length > 8) {
-                _latestEpisodes = _latestEpisodes.sublist(0, 8);
+              if (_latestEpisodes.length > 4) {
+                _latestEpisodes = _latestEpisodes.sublist(0, 4);
               }
             }
 

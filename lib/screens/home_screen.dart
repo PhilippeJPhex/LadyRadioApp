@@ -5,6 +5,7 @@ import '../core/app_constants.dart';
 import '../viewmodels/home_viewmodel.dart';
 import '../widgets/lady_radio_header.dart';
 import '../data/favorites_service.dart';
+import '../data/banner_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/rss_episode.dart';
 import 'program_screen.dart';
@@ -247,8 +248,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         },
                       ),
 
-                      const TwitchEventsSlider(),
-
                       ListenableBuilder(
                         listenable: _viewModel,
                         builder: (context, _) {
@@ -379,6 +378,15 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           );
                         },
+                      ),
+                      const TwitchEventsSlider(),
+                      const SizedBox(height: 24),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16.0),
+                        child: CampaignBanner(
+                          position: BannerPosition.bottom,
+                          allowFallback: false,
+                        ),
                       ),
                       const SizedBox(height: 100), // Spazio per il mini player
                     ],

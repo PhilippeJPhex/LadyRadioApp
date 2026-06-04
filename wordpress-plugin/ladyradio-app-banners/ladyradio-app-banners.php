@@ -3,7 +3,7 @@
  * Plugin Name: Lady Radio App Banners
  * Plugin URI: https://ladyradio.it
  * Description: Gestisce i banner sponsorizzati per l'App Mobile Flutter di Lady Radio.
- * Version: 1.8.3
+ * Version: 1.9.0
  * Author: Borda AI
  * Author URI: https://ladyradio.it
  * Text Domain: ladyradio-app-banners
@@ -13,7 +13,7 @@ if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly
 }
 
-class LadyRadioAppBannersPlugin_183
+class LadyRadioAppBannersPlugin_190
 {
 
     public function __construct()
@@ -102,6 +102,12 @@ class LadyRadioAppBannersPlugin_183
             'sanitize_callback' => 'esc_url_raw',
             'default' => home_url('/'),
         ));
+
+        register_setting('lr_app_banner_settings', 'lr_app_twitch_channel_url', array(
+            'type' => 'string',
+            'sanitize_callback' => 'esc_url_raw',
+            'default' => '#',
+        ));
     }
 
     public function render_settings_page()
@@ -133,6 +139,15 @@ class LadyRadioAppBannersPlugin_183
         echo '<td>';
         echo '<input type="url" id="lr_app_banner_fallback_target_url" name="lr_app_banner_fallback_target_url" value="' . esc_attr($target_url) . '" class="regular-text" placeholder="https://..." />';
         echo '<p class="description">Dove aprire l&rsquo;utente quando tocca il fallback. Se vuoto, verr&agrave; usata la home del sito.</p>';
+        echo '</td>';
+        echo '</tr>';
+
+        $twitch_channel_url = get_option('lr_app_twitch_channel_url', '#');
+        echo '<tr>';
+        echo '<th scope="row"><label for="lr_app_twitch_channel_url">URL canale Twitch</label></th>';
+        echo '<td>';
+        echo '<input type="url" id="lr_app_twitch_channel_url" name="lr_app_twitch_channel_url" value="' . esc_attr($twitch_channel_url) . '" class="regular-text" placeholder="https://www.twitch.tv/..." />';
+        echo '<p class="description">Usato dal pulsante Seguici nella home dell&rsquo;app. Lascia # finch&eacute; il canale non &egrave; attivo.</p>';
         echo '</td>';
         echo '</tr>';
         echo '</table>';
@@ -248,25 +263,51 @@ class LadyRadioAppBannersPlugin_183
     {
         wp_nonce_field('lr_save_banner_data', 'lr_banner_meta_box_nonce');
 
-        $target_url = get_post_meta($post->ID, '_lr_banner_target_url', true);
-        $start_date = get_post_meta($post->ID, '_lr_banner_start_date', true);
-        $end_date = get_post_meta($post->ID, '_lr_banner_end_date', true);
+        $target_url = get_post_meta($post->ID, 'banner_url', true);
+        if (empty($target_url)) {
+            $target_url = get_post_meta($post->ID, '_lr_banner_target_url', true);
+        }
+
+        $start_date = get_post_meta($post->ID, 'banner_data_inizio', true);
+        if (empty($start_date)) {
+            $start_date = get_post_meta($post->ID, '_lr_banner_start_date', true);
+        }
+
+        $end_date = get_post_meta($post->ID, 'banner_data_fine', true);
+        if (empty($end_date)) {
+            $end_date = get_post_meta($post->ID, '_lr_banner_end_date', true);
+        }
+
+        $position = get_post_meta($post->ID, 'banner_posizione', true);
+        if (empty($position)) {
+            $position = 'upper';
+        }
 
         echo '<div style="padding: 10px 0;">';
-        echo '<label for="lr_banner_target_url" style="display:block; font-weight:bold; margin-bottom:5px;">Link di Destinazione (URL):</label>';
-        echo '<input type="url" id="lr_banner_target_url" name="lr_banner_target_url" value="' . esc_attr($target_url) . '" style="width:100%;" placeholder="https://..." />';
-        echo '<p class="description">Dove atterra l\'utente quando tocca il banner sull\'app.</p>';
+        echo '<label for="banner_posizione" style="display:block; font-weight:bold; margin-bottom:5px;">Posizione banner:</label>';
+        echo '<select id="banner_posizione" name="banner_posizione">';
+        echo '<option value="upper" ' . selected($position, 'upper', false) . '>Upper - solo in cima alla home</option>';
+        echo '<option value="bottom" ' . selected($position, 'bottom', false) . '>Bottom - solo in fondo alla home</option>';
+        echo '<option value="entrambi" ' . selected($position, 'entrambi', false) . '>Entrambi - cima e fondo home</option>';
+        echo '</select>';
+        echo '<p class="description">I banner gi&agrave; esistenti senza posizione vengono trattati come Upper.</p>';
         echo '</div>';
 
         echo '<div style="padding: 10px 0;">';
-        echo '<label for="lr_banner_start_date" style="display:block; font-weight:bold; margin-bottom:5px;">Data e Ora di Inizio:</label>';
-        echo '<input type="datetime-local" id="lr_banner_start_date" name="lr_banner_start_date" value="' . esc_attr($start_date) . '" />';
+        echo '<label for="banner_url" style="display:block; font-weight:bold; margin-bottom:5px;">Link di Destinazione (URL):</label>';
+        echo '<input type="url" id="banner_url" name="banner_url" value="' . esc_attr($target_url) . '" style="width:100%;" placeholder="https://..." />';
+        echo '<p class="description">Se vuoto, il banner viene mostrato ma non &egrave; cliccabile.</p>';
         echo '</div>';
 
         echo '<div style="padding: 10px 0;">';
-        echo '<label for="lr_banner_end_date" style="display:block; font-weight:bold; margin-bottom:5px;">Data e Ora di Fine:</label>';
-        echo '<input type="datetime-local" id="lr_banner_end_date" name="lr_banner_end_date" value="' . esc_attr($end_date) . '" />';
-        echo '<p class="description">Seleziona i limiti nel tempo durante i quali il banner sar&agrave; mostrato nell\'App. L\'App chieder&agrave; a WP solo quello in corso.</p>';
+        echo '<label for="banner_data_inizio" style="display:block; font-weight:bold; margin-bottom:5px;">Data e ora di inizio:</label>';
+        echo '<input type="datetime-local" id="banner_data_inizio" name="banner_data_inizio" value="' . esc_attr($start_date) . '" />';
+        echo '</div>';
+
+        echo '<div style="padding: 10px 0;">';
+        echo '<label for="banner_data_fine" style="display:block; font-weight:bold; margin-bottom:5px;">Data e ora di fine:</label>';
+        echo '<input type="datetime-local" id="banner_data_fine" name="banner_data_fine" value="' . esc_attr($end_date) . '" />';
+        echo '<p class="description">Se entrambe le date sono vuote, il banner resta sempre visibile.</p>';
         echo '</div>';
 
         echo '<div style="padding: 12px; margin-top: 15px; border-left: 4px solid #d63638; background: #fff5f5;">';
@@ -341,30 +382,58 @@ class LadyRadioAppBannersPlugin_183
     {
         wp_nonce_field('lr_save_twitch_data', 'lr_twitch_meta_box_nonce');
 
-        $target_url = get_post_meta($post->ID, '_lr_twitch_target_url', true);
-        $start_date = get_post_meta($post->ID, '_lr_twitch_start_date', true);
-        $end_date = get_post_meta($post->ID, '_lr_twitch_end_date', true);
+        $description = get_post_meta($post->ID, 'twitch_descrizione', true);
+        $date_time = get_post_meta($post->ID, 'twitch_data_ora', true);
+        if (empty($date_time)) {
+            $date_time = get_post_meta($post->ID, '_lr_twitch_start_date', true);
+        }
+
+        $target_url = get_post_meta($post->ID, 'twitch_url', true);
+        if (empty($target_url)) {
+            $target_url = get_post_meta($post->ID, '_lr_twitch_target_url', true);
+        }
+
+        $rubrica = get_post_meta($post->ID, 'twitch_rubrica', true);
+        $status = get_post_meta($post->ID, 'twitch_stato', true);
+        if (empty($status)) {
+            $status = 'programmata';
+        }
 
         echo '<div style="padding: 10px 0;">';
-        echo '<label for="lr_twitch_target_url" style="display:block; font-weight:bold; margin-bottom:5px;">Link Twitch / destinazione:</label>';
-        echo '<input type="url" id="lr_twitch_target_url" name="lr_twitch_target_url" value="' . esc_attr($target_url) . '" style="width:100%;" placeholder="https://www.twitch.tv/..." />';
-        echo '<p class="description">Link aperto quando l&rsquo;utente tocca la locandina nell&rsquo;app.</p>';
+        echo '<label for="twitch_descrizione" style="display:block; font-weight:bold; margin-bottom:5px;">Descrizione breve:</label>';
+        echo '<input type="text" maxlength="120" id="twitch_descrizione" name="twitch_descrizione" value="' . esc_attr($description) . '" style="width:100%;" placeholder="Massimo 120 caratteri" />';
+        echo '<p class="description">Usata come sottotitolo nella card Twitch dell&rsquo;app.</p>';
         echo '</div>';
 
         echo '<div style="padding: 10px 0;">';
-        echo '<label for="lr_twitch_start_date" style="display:block; font-weight:bold; margin-bottom:5px;">Data e ora della diretta:</label>';
-        echo '<input type="datetime-local" id="lr_twitch_start_date" name="lr_twitch_start_date" value="' . esc_attr($start_date) . '" />';
-        echo '<p class="description">La locandina appare nella sezione “Questa settimana su Twitch” se la diretta cade nei prossimi 7 giorni.</p>';
+        echo '<label for="twitch_data_ora" style="display:block; font-weight:bold; margin-bottom:5px;">Data e ora della diretta:</label>';
+        echo '<input type="datetime-local" id="twitch_data_ora" name="twitch_data_ora" value="' . esc_attr($date_time) . '" />';
+        echo '<p class="description">Formato salvato: YYYY-MM-DD HH:MM.</p>';
         echo '</div>';
 
         echo '<div style="padding: 10px 0;">';
-        echo '<label for="lr_twitch_end_date" style="display:block; font-weight:bold; margin-bottom:5px;">Data e ora fine diretta:</label>';
-        echo '<input type="datetime-local" id="lr_twitch_end_date" name="lr_twitch_end_date" value="' . esc_attr($end_date) . '" />';
-        echo '<p class="description">Dopo questa data/ora la locandina sparisce automaticamente dall&rsquo;app.</p>';
+        echo '<label for="twitch_url" style="display:block; font-weight:bold; margin-bottom:5px;">URL della puntata su Twitch:</label>';
+        echo '<input type="url" id="twitch_url" name="twitch_url" value="' . esc_attr($target_url) . '" style="width:100%;" placeholder="https://www.twitch.tv/..." />';
+        echo '<p class="description">Link al VOD o alla diretta. Pu&ograve; restare vuoto finch&eacute; il canale non &egrave; attivo.</p>';
+        echo '</div>';
+
+        echo '<div style="padding: 10px 0;">';
+        echo '<label for="twitch_rubrica" style="display:block; font-weight:bold; margin-bottom:5px;">Rubrica di appartenenza:</label>';
+        echo '<input type="text" id="twitch_rubrica" name="twitch_rubrica" value="' . esc_attr($rubrica) . '" style="width:100%;" placeholder="Es. Rifiuti & Città" />';
+        echo '<p class="description">Serve per raggruppare le puntate nella vista dedicata dell&rsquo;app.</p>';
+        echo '</div>';
+
+        echo '<div style="padding: 10px 0;">';
+        echo '<label for="twitch_stato" style="display:block; font-weight:bold; margin-bottom:5px;">Stato:</label>';
+        echo '<select id="twitch_stato" name="twitch_stato">';
+        echo '<option value="programmata" ' . selected($status, 'programmata', false) . '>Programmata</option>';
+        echo '<option value="in_onda" ' . selected($status, 'in_onda', false) . '>In onda</option>';
+        echo '<option value="conclusa" ' . selected($status, 'conclusa', false) . '>Conclusa</option>';
+        echo '</select>';
         echo '</div>';
 
         echo '<div style="padding: 12px; margin-top: 15px; border-left: 4px solid #9146ff; background: #f7f1ff;">';
-        echo '<p style="margin:0;"><strong>Immagine locandina:</strong> usa l&rsquo;immagine in evidenza del contenuto. Mantieni la stessa proporzione del banner app.</p>';
+        echo '<p style="margin:0;"><strong>Immagine di copertina:</strong> usa l&rsquo;immagine in evidenza del contenuto. Titolo e immagine sono nativi WordPress.</p>';
         echo '</div>';
     }
 
@@ -378,14 +447,29 @@ class LadyRadioAppBannersPlugin_183
 
         // Banner Saving logic
         if (isset($_POST['lr_banner_meta_box_nonce']) && wp_verify_nonce($_POST['lr_banner_meta_box_nonce'], 'lr_save_banner_data')) {
-            if (isset($_POST['lr_banner_target_url'])) {
-                update_post_meta($post_id, '_lr_banner_target_url', sanitize_url($_POST['lr_banner_target_url']));
+            $allowed_positions = array('upper', 'bottom', 'entrambi');
+            $position = isset($_POST['banner_posizione']) ? sanitize_text_field($_POST['banner_posizione']) : 'upper';
+            if (!in_array($position, $allowed_positions, true)) {
+                $position = 'upper';
             }
-            if (isset($_POST['lr_banner_start_date'])) {
-                update_post_meta($post_id, '_lr_banner_start_date', sanitize_text_field($_POST['lr_banner_start_date']));
+            update_post_meta($post_id, 'banner_posizione', $position);
+
+            if (isset($_POST['banner_url'])) {
+                $banner_url = sanitize_url($_POST['banner_url']);
+                update_post_meta($post_id, 'banner_url', $banner_url);
+                update_post_meta($post_id, '_lr_banner_target_url', $banner_url);
             }
-            if (isset($_POST['lr_banner_end_date'])) {
-                update_post_meta($post_id, '_lr_banner_end_date', sanitize_text_field($_POST['lr_banner_end_date']));
+
+            if (isset($_POST['banner_data_inizio'])) {
+                $start_date = sanitize_text_field($_POST['banner_data_inizio']);
+                update_post_meta($post_id, 'banner_data_inizio', $start_date);
+                update_post_meta($post_id, '_lr_banner_start_date', $start_date);
+            }
+
+            if (isset($_POST['banner_data_fine'])) {
+                $end_date = sanitize_text_field($_POST['banner_data_fine']);
+                update_post_meta($post_id, 'banner_data_fine', $end_date);
+                update_post_meta($post_id, '_lr_banner_end_date', $end_date);
             }
 
             if (get_post_meta($post_id, '_lr_banner_impressions', true) === '') {
@@ -399,15 +483,32 @@ class LadyRadioAppBannersPlugin_183
         }
 
         if (isset($_POST['lr_twitch_meta_box_nonce']) && wp_verify_nonce($_POST['lr_twitch_meta_box_nonce'], 'lr_save_twitch_data')) {
-            if (isset($_POST['lr_twitch_target_url'])) {
-                update_post_meta($post_id, '_lr_twitch_target_url', sanitize_url($_POST['lr_twitch_target_url']));
+            if (isset($_POST['twitch_descrizione'])) {
+                update_post_meta($post_id, 'twitch_descrizione', substr(sanitize_text_field($_POST['twitch_descrizione']), 0, 120));
             }
-            if (isset($_POST['lr_twitch_start_date'])) {
-                update_post_meta($post_id, '_lr_twitch_start_date', sanitize_text_field($_POST['lr_twitch_start_date']));
+
+            if (isset($_POST['twitch_data_ora'])) {
+                $date_time = sanitize_text_field($_POST['twitch_data_ora']);
+                update_post_meta($post_id, 'twitch_data_ora', $date_time);
+                update_post_meta($post_id, '_lr_twitch_start_date', $date_time);
             }
-            if (isset($_POST['lr_twitch_end_date'])) {
-                update_post_meta($post_id, '_lr_twitch_end_date', sanitize_text_field($_POST['lr_twitch_end_date']));
+
+            if (isset($_POST['twitch_url'])) {
+                $twitch_url = sanitize_url($_POST['twitch_url']);
+                update_post_meta($post_id, 'twitch_url', $twitch_url);
+                update_post_meta($post_id, '_lr_twitch_target_url', $twitch_url);
             }
+
+            if (isset($_POST['twitch_rubrica'])) {
+                update_post_meta($post_id, 'twitch_rubrica', sanitize_text_field($_POST['twitch_rubrica']));
+            }
+
+            $allowed_statuses = array('programmata', 'in_onda', 'conclusa');
+            $status = isset($_POST['twitch_stato']) ? sanitize_text_field($_POST['twitch_stato']) : 'programmata';
+            if (!in_array($status, $allowed_statuses, true)) {
+                $status = 'programmata';
+            }
+            update_post_meta($post_id, 'twitch_stato', $status);
 
             $this->clear_known_caches();
         }
@@ -466,27 +567,15 @@ class LadyRadioAppBannersPlugin_183
 
     public function get_active_banner($request)
     {
-        $now = current_time('Y-m-d\TH:i');
+        $position = sanitize_text_field($request->get_param('position') ?: 'upper');
+        if (!in_array($position, array('upper', 'bottom'), true)) {
+            $position = 'upper';
+        }
 
         $args = array(
             'post_type' => 'lr_app_banner',
             'post_status' => 'publish',
-            'posts_per_page' => 1,
-            'meta_query' => array(
-                'relation' => 'AND',
-                array(
-                    'key' => '_lr_banner_start_date',
-                    'value' => $now,
-                    'compare' => '<=',
-                    'type' => 'DATETIME'
-                ),
-                array(
-                    'key' => '_lr_banner_end_date',
-                    'value' => $now,
-                    'compare' => '>=',
-                    'type' => 'DATETIME'
-                )
-            ),
+            'posts_per_page' => -1,
             'orderby' => 'date',
             'order' => 'DESC'
         );
@@ -494,32 +583,92 @@ class LadyRadioAppBannersPlugin_183
         $query = new WP_Query($args);
 
         if ($query->have_posts()) {
-            $post = $query->posts[0];
-            $image_id = get_post_thumbnail_id($post->ID);
-            $image_url = wp_get_attachment_image_url($image_id, 'full');
+            foreach ($query->posts as $post) {
+                if (!$this->banner_matches_position($post->ID, $position) || !$this->banner_has_valid_date($post->ID)) {
+                    continue;
+                }
 
-            // Fallback securely logic if no thumbnail is set
-            if (!$image_url) {
-                return new WP_REST_Response(array('error' => 'No image set for the active banner.'), 404);
+                $image_id = get_post_thumbnail_id($post->ID);
+                $image_url = wp_get_attachment_image_url($image_id, 'full');
+
+                if (!$image_url) {
+                    continue;
+                }
+
+                $target_url = get_post_meta($post->ID, 'banner_url', true);
+                if (empty($target_url)) {
+                    $target_url = get_post_meta($post->ID, '_lr_banner_target_url', true);
+                }
+
+                $response = array(
+                    'id' => (string) $post->ID,
+                    'imageUrl' => $image_url,
+                    'targetUrl' => $target_url ? esc_url_raw($target_url) : '',
+                    'position' => $this->banner_position($post->ID),
+                    'isFallback' => false,
+                );
+
+                wp_reset_postdata();
+                return new WP_REST_Response($response, 200);
             }
-
-            $target_url = get_post_meta($post->ID, '_lr_banner_target_url', true);
-
-            $response = array(
-                'id' => (string) $post->ID, // important to be string for Flutter side matching if needed
-                'imageUrl' => $image_url,
-                'targetUrl' => $target_url,
-            );
-
-            return new WP_REST_Response($response, 200);
+            wp_reset_postdata();
         }
 
-        $fallback = $this->get_fallback_banner_response();
+        $fallback = $position === 'upper' ? $this->get_fallback_banner_response() : null;
         if ($fallback) {
             return new WP_REST_Response($fallback, 200);
         }
 
         return new WP_REST_Response(array('message' => 'No active banner right now.'), 404);
+    }
+
+    private function banner_position($post_id)
+    {
+        $position = get_post_meta($post_id, 'banner_posizione', true);
+        if (empty($position)) {
+            return 'upper';
+        }
+
+        if (!in_array($position, array('upper', 'bottom', 'entrambi'), true)) {
+            return 'upper';
+        }
+
+        return $position;
+    }
+
+    private function banner_matches_position($post_id, $requested_position)
+    {
+        $position = $this->banner_position($post_id);
+        return $position === 'entrambi' || $position === $requested_position;
+    }
+
+    private function banner_has_valid_date($post_id)
+    {
+        $now = current_time('Y-m-d\TH:i');
+
+        $start_date = get_post_meta($post_id, 'banner_data_inizio', true);
+        if (empty($start_date)) {
+            $start_date = get_post_meta($post_id, '_lr_banner_start_date', true);
+        }
+
+        $end_date = get_post_meta($post_id, 'banner_data_fine', true);
+        if (empty($end_date)) {
+            $end_date = get_post_meta($post_id, '_lr_banner_end_date', true);
+        }
+
+        if (empty($start_date) && empty($end_date)) {
+            return true;
+        }
+
+        if (!empty($start_date) && $now < $start_date) {
+            return false;
+        }
+
+        if (!empty($end_date) && $now > $end_date) {
+            return false;
+        }
+
+        return true;
     }
 
     private function get_fallback_banner_response()
@@ -698,64 +847,107 @@ class LadyRadioAppBannersPlugin_183
             return new WP_REST_Response($cached, 200);
         }
 
-        $now_timestamp = current_time('timestamp');
-        $now = date('Y-m-d\TH:i', $now_timestamp);
-        $week_end = date('Y-m-d\TH:i', strtotime('+7 days', $now_timestamp));
-
         $args = array(
             'post_type' => 'lr_twitch_event',
             'post_status' => 'publish',
             'posts_per_page' => -1,
-            'meta_key' => '_lr_twitch_start_date',
-            'orderby' => 'meta_value',
+            'orderby' => 'date',
             'order' => 'ASC',
-            'meta_query' => array(
-                'relation' => 'AND',
-                array(
-                    'key' => '_lr_twitch_start_date',
-                    'value' => $week_end,
-                    'compare' => '<=',
-                    'type' => 'DATETIME'
-                ),
-                array(
-                    'key' => '_lr_twitch_end_date',
-                    'value' => $now,
-                    'compare' => '>=',
-                    'type' => 'DATETIME'
-                )
-            ),
         );
 
         $query = new WP_Query($args);
-        $events = array();
+        $scheduled = array();
+        $completed = array();
 
         if ($query->have_posts()) {
             foreach ($query->posts as $post) {
-                $image_id = get_post_thumbnail_id($post->ID);
-                $image_url = $image_id ? wp_get_attachment_image_url($image_id, 'full') : '';
-                $target_url = get_post_meta($post->ID, '_lr_twitch_target_url', true);
-                $start_date = get_post_meta($post->ID, '_lr_twitch_start_date', true);
-                $end_date = get_post_meta($post->ID, '_lr_twitch_end_date', true);
-
-                if (empty($image_url) || empty($target_url) || empty($start_date) || empty($end_date)) {
+                $event = $this->build_twitch_event_response($post);
+                if (!$event) {
                     continue;
                 }
 
-                $events[] = array(
-                    'id' => (string) $post->ID,
-                    'title' => html_entity_decode(get_the_title($post->ID)),
-                    'imageUrl' => esc_url_raw($image_url),
-                    'targetUrl' => esc_url_raw($target_url),
-                    'startDate' => $start_date,
-                    'endDate' => $end_date,
-                );
+                if ($event['status'] === 'conclusa') {
+                    $completed[] = $event;
+                } elseif ($event['status'] === 'programmata' || $event['status'] === 'in_onda') {
+                    $scheduled[] = $event;
+                }
             }
             wp_reset_postdata();
         }
 
-        set_transient('lr_app_twitch_events', $events, 5 * MINUTE_IN_SECONDS);
+        usort($scheduled, array($this, 'sort_twitch_events_ascending'));
+        usort($completed, array($this, 'sort_twitch_events_descending'));
 
-        return new WP_REST_Response($events, 200);
+        $channel_url = get_option('lr_app_twitch_channel_url', '#');
+        $response = array(
+            'channelUrl' => $channel_url && $channel_url !== '#' ? esc_url_raw($channel_url) : '#',
+            'scheduled' => $scheduled,
+            'completed' => $completed,
+        );
+
+        set_transient('lr_app_twitch_events', $response, 5 * MINUTE_IN_SECONDS);
+
+        return new WP_REST_Response($response, 200);
+    }
+
+    private function build_twitch_event_response($post)
+    {
+        $image_id = get_post_thumbnail_id($post->ID);
+        $image_url = $image_id ? wp_get_attachment_image_url($image_id, 'full') : '';
+
+        $date_time = get_post_meta($post->ID, 'twitch_data_ora', true);
+        if (empty($date_time)) {
+            $date_time = get_post_meta($post->ID, '_lr_twitch_start_date', true);
+        }
+
+        if (empty($date_time)) {
+            return null;
+        }
+
+        $target_url = get_post_meta($post->ID, 'twitch_url', true);
+        if (empty($target_url)) {
+            $target_url = get_post_meta($post->ID, '_lr_twitch_target_url', true);
+        }
+
+        $status = get_post_meta($post->ID, 'twitch_stato', true);
+        if (empty($status)) {
+            $status = 'programmata';
+        }
+
+        if (!in_array($status, array('programmata', 'in_onda', 'conclusa'), true)) {
+            $status = 'programmata';
+        }
+
+        return array(
+            'id' => (string) $post->ID,
+            'title' => html_entity_decode(get_the_title($post->ID)),
+            'description' => substr((string) get_post_meta($post->ID, 'twitch_descrizione', true), 0, 120),
+            'rubrica' => (string) get_post_meta($post->ID, 'twitch_rubrica', true),
+            'episodeNumber' => $this->episode_number_from_title(get_the_title($post->ID)),
+            'imageUrl' => $image_url ? esc_url_raw($image_url) : '',
+            'targetUrl' => $target_url ? esc_url_raw($target_url) : '',
+            'startDate' => $date_time,
+            'status' => $status,
+        );
+    }
+
+    private function episode_number_from_title($title)
+    {
+        if (preg_match('/(?:ep\.?|episodio)\s*(\d+)/i', $title, $matches)) {
+            return (int) $matches[1];
+        }
+
+        return 0;
+    }
+
+    private function sort_twitch_events_ascending($a, $b)
+    {
+        return strcmp($a['startDate'], $b['startDate']);
+    }
+
+    private function sort_twitch_events_descending($a, $b)
+    {
+        return strcmp($b['startDate'], $a['startDate']);
     }
 
     /**
@@ -821,5 +1013,5 @@ class LadyRadioAppBannersPlugin_183
 }
 
 // Inizializza il plugin
-register_activation_hook(__FILE__, array('LadyRadioAppBannersPlugin_183', 'activate'));
-new LadyRadioAppBannersPlugin_183();
+register_activation_hook(__FILE__, array('LadyRadioAppBannersPlugin_190', 'activate'));
+new LadyRadioAppBannersPlugin_190();

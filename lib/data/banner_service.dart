@@ -4,17 +4,27 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../core/app_constants.dart';
 
+enum BannerPosition {
+  upper('upper'),
+  bottom('bottom');
+
+  final String apiValue;
+  const BannerPosition(this.apiValue);
+}
+
 class CampaignBannerModel {
   final String id;
   final String imageUrl;
   final String targetUrl;
   final bool isFallback;
+  final BannerPosition position;
 
   CampaignBannerModel({
     required this.id,
     required this.imageUrl,
     required this.targetUrl,
     this.isFallback = false,
+    this.position = BannerPosition.upper,
   });
 
   factory CampaignBannerModel.fromJson(Map<String, dynamic> json) {
@@ -23,6 +33,7 @@ class CampaignBannerModel {
       imageUrl: json['imageUrl']?.toString() ?? '',
       targetUrl: json['targetUrl']?.toString() ?? '',
       isFallback: _readBool(json['isFallback'] ?? json['is_fallback']),
+      position: _readPosition(json['position'] ?? json['posizione']),
     );
   }
 
@@ -32,6 +43,7 @@ class CampaignBannerModel {
       imageUrl: AppConstants.fallbackBannerImage,
       targetUrl: AppConstants.fallbackBannerTargetUrl,
       isFallback: true,
+      position: BannerPosition.upper,
     );
   }
 
@@ -48,6 +60,12 @@ class CampaignBannerModel {
       ].contains(value.trim().toLowerCase());
     }
     return false;
+  }
+
+  static BannerPosition _readPosition(dynamic value) {
+    return value?.toString() == BannerPosition.bottom.apiValue
+        ? BannerPosition.bottom
+        : BannerPosition.upper;
   }
 }
 
@@ -72,10 +90,14 @@ class BannerService {
 
   /// Chiama GET /api/active-banner
   /// Ritorna il banner valido per data, o null se non ce ne sono
-  Future<CampaignBannerModel?> fetchActiveBanner() async {
+  Future<CampaignBannerModel?> fetchActiveBanner({
+    BannerPosition position = BannerPosition.upper,
+  }) async {
     try {
       final apiUrl = '$_baseUrl/active-banner';
-      final uri = Uri.parse(apiUrl);
+      final uri = Uri.parse(
+        apiUrl,
+      ).replace(queryParameters: {'position': position.apiValue});
 
       final response = await _client
           .get(uri, headers: _defaultHeaders)

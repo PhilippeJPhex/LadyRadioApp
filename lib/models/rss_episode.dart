@@ -7,6 +7,7 @@ class RssEpisode {
   final String audioUrl;
   final String imageUrl;
   final String duration;
+  final String videoUrl;
   String? programId;
 
   RssEpisode({
@@ -16,6 +17,7 @@ class RssEpisode {
     required this.audioUrl,
     required this.imageUrl,
     required this.duration,
+    this.videoUrl = '',
     this.programId,
   });
 
@@ -26,9 +28,19 @@ class RssEpisode {
       return elements.isNotEmpty ? elements.first.innerText : '';
     }
 
+    String extractVideoUrl(String description) {
+      final match = RegExp(
+        r'''(?:Video\s+puntata\s*:|\[VIDEO\])\s*(https?:\/\/[^\s<>"']+)''',
+        caseSensitive: false,
+      ).firstMatch(description);
+      return match?.group(1) ?? '';
+    }
+
     // Attempt to extract duration (often in itunes:duration)
     final itunesDuration = xmlNode.findElements('itunes:duration');
-    String durationStr = itunesDuration.isNotEmpty ? itunesDuration.first.innerText : '00:00';
+    String durationStr = itunesDuration.isNotEmpty
+        ? itunesDuration.first.innerText
+        : '00:00';
 
     // Attempt to extract image (from itunes:image or fallback)
     final itunesImage = xmlNode.findElements('itunes:image');
@@ -36,7 +48,7 @@ class RssEpisode {
     if (itunesImage.isNotEmpty) {
       imageUrl = itunesImage.first.getAttribute('href') ?? '';
     }
-    
+
     // Attempt to extract audio url from enclosure
     final enclosure = xmlNode.findElements('enclosure');
     String audioUrl = '';
@@ -44,13 +56,16 @@ class RssEpisode {
       audioUrl = enclosure.first.getAttribute('url') ?? '';
     }
 
+    final description = getText('description');
+
     return RssEpisode(
       title: getText('title'),
-      description: getText('description'),
+      description: description,
       pubDate: getText('pubDate'),
       audioUrl: audioUrl,
       imageUrl: imageUrl,
       duration: durationStr,
+      videoUrl: extractVideoUrl(description),
     );
   }
 }

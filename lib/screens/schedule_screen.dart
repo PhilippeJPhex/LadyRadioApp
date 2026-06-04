@@ -182,10 +182,10 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                       const Padding(
                         padding: EdgeInsets.symmetric(horizontal: 40.0),
                         child: Text(
-                          'Scopri tutte le trasmissioni di Lady Radio,\ndalla cronaca allo sport.',
+                          'Scopri e ascolta tutte le trasmissioni di Lady Radio, dalla cronaca allo sport.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Color(0xFF868B9E),
+                            color: Colors.black,
                             fontSize: 12.5,
                           ), // Ridotto da 13.5
                         ),
@@ -214,7 +214,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                           child: Center(
                             child: Text(
                               'Nessun programma per il palinsesto',
-                              style: TextStyle(color: Colors.grey),
+                              style: TextStyle(color: Colors.black),
                             ),
                           ),
                         )
@@ -344,7 +344,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                                                   Text(
                                                     item['description'],
                                                     style: const TextStyle(
-                                                      color: Color(0xFF969AB0),
+                                                      color: Colors.black,
                                                       fontSize: 12.5,
                                                       height: 1.25,
                                                     ),

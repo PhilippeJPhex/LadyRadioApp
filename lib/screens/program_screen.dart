@@ -6,8 +6,10 @@ import '../core/app_theme.dart';
 import '../core/app_constants.dart';
 import '../data/favorites_service.dart';
 import '../models/rss_episode.dart';
+import '../utils/date_text_formatter.dart';
 import '../viewmodels/program_viewmodel.dart';
 import '../widgets/global_mini_player.dart';
+import '../widgets/whatsapp_icon.dart';
 import 'podcast_screen.dart';
 
 class ProgramScreen extends StatefulWidget {
@@ -64,6 +66,8 @@ class _ProgramScreenState extends State<ProgramScreen> {
       'date': episode.pubDate,
       'audioUrl': episode.audioUrl,
       'rssFeed': widget.programData['rssFeed'],
+      'isPodcast': widget.programData['isPodcast'] ?? false,
+      'urlVideo': episode.videoUrl,
     };
   }
 
@@ -116,9 +120,26 @@ class _ProgramScreenState extends State<ProgramScreen> {
     }
   }
 
+  bool _isPodcastProgram(Map<String, dynamic> program) {
+    final value = program['isPodcast'] ?? program['is_podcast'];
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) {
+      return [
+        '1',
+        'true',
+        'yes',
+        'si',
+        'sì',
+      ].contains(value.trim().toLowerCase());
+    }
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final program = widget.programData;
+    final isPodcastProgram = _isPodcastProgram(program);
     // Descrizione dal programData (non hardcoded), fallback generico
     final description = (program['description'] as String?)?.isNotEmpty == true
         ? program['description'] as String
@@ -232,21 +253,24 @@ class _ProgramScreenState extends State<ProgramScreen> {
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(
                                     fontSize: 14,
-                                    color: Colors.grey,
+                                    color: Colors.black,
                                   ),
                                 ),
                               ),
                               const SizedBox(height: 16),
-                              Text(
-                                schedule,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.secondaryColor,
+                              if (!isPodcastProgram) ...[
+                                Text(
+                                  schedule,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.secondaryColor,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 24),
+                                const SizedBox(height: 24),
+                              ] else
+                                const SizedBox(height: 24),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
@@ -322,7 +346,7 @@ class _ProgramScreenState extends State<ProgramScreen> {
                                         value: 'write',
                                         child: Row(
                                           children: [
-                                            Icon(Icons.chat, size: 20),
+                                            WhatsAppIcon(size: 20),
                                             SizedBox(width: 10),
                                             Text('Scrivici'),
                                           ],
@@ -371,7 +395,7 @@ class _ProgramScreenState extends State<ProgramScreen> {
                                           return const Text(
                                             'Nessuna puntata disponibile.',
                                             style: TextStyle(
-                                              color: Colors.grey,
+                                              color: Colors.black,
                                             ),
                                           );
                                         }
@@ -433,7 +457,7 @@ class _ProgramScreenState extends State<ProgramScreen> {
                     ),
                     elevation: 5,
                   ),
-                  icon: Icon(Icons.chat, color: AppTheme.successColor),
+                  icon: const WhatsAppIcon(size: 24),
                   label: const Text(
                     'Invia un messaggio per la diretta',
                     style: TextStyle(fontWeight: FontWeight.bold),
@@ -448,13 +472,8 @@ class _ProgramScreenState extends State<ProgramScreen> {
   }
 
   Widget _buildEpisodeTile(BuildContext context, RssEpisode ep) {
-    final parts = ep.pubDate.split(' ');
-    String day = '0';
-    String month = 'MMM';
-    if (parts.length >= 3) {
-      day = parts[1];
-      month = parts[2].toUpperCase();
-    }
+    final day = DateTextFormatter.dayFromRss(ep.pubDate);
+    final month = DateTextFormatter.monthShortUpperFromRss(ep.pubDate);
 
     final epMap = _episodeDataMap(ep);
 
@@ -474,7 +493,7 @@ class _ProgramScreenState extends State<ProgramScreen> {
               child: Column(
                 children: [
                   Text(
-                    day,
+                    day.isNotEmpty ? day : '--',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -482,7 +501,7 @@ class _ProgramScreenState extends State<ProgramScreen> {
                     ),
                   ),
                   Text(
-                    month,
+                    month.isNotEmpty ? month : '',
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -512,7 +531,7 @@ class _ProgramScreenState extends State<ProgramScreen> {
                   const SizedBox(height: 4),
                   Text(
                     ep.description.replaceAll(RegExp(r'<[^>]*>'), '').trim(),
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    style: const TextStyle(fontSize: 12, color: Colors.black),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),

@@ -9,6 +9,8 @@ private struct CarPlayProgram {
   let category: String
   let feedURL: URL
   let artwork: String?
+  let isPodcast: Bool
+  let podcastCategory: String
 }
 
 private struct CarPlayEpisode {
@@ -25,6 +27,7 @@ private final class CarPlayAudioController {
 
   private var player: AVPlayer?
   private var currentEpisode: CarPlayEpisode?
+  private var playbackRequestID = 0
 
   private init() {
     configureSession()
@@ -32,23 +35,32 @@ private final class CarPlayAudioController {
   }
 
   func playLive() {
+    let requestID = beginPlaybackRequest()
+    prepareForPlaybackRequest(requestID)
     CarPlayDataService.fetchLiveStreamURL { [weak self] url in
       let episode = CarPlayEpisode(
         title: "Lady Radio Live",
         program: "Lady Radio",
         audioURL: url,
         detail: "Diretta",
-        artwork: "LadyRadioCover",
+        artwork: "LadyRadioCarCover",
         isLiveStream: true
       )
-      self?.play(episode)
+      self?.play(episode, requestID: requestID)
     }
   }
 
   func play(_ episode: CarPlayEpisode) {
-    currentEpisode = episode
+    let requestID = beginPlaybackRequest()
+    prepareForPlaybackRequest(requestID)
+    play(episode, requestID: requestID)
+  }
+
+  private func play(_ episode: CarPlayEpisode, requestID: Int) {
     DispatchQueue.main.async {
+      guard requestID == self.playbackRequestID else { return }
       self.configureSession()
+      self.currentEpisode = episode
       self.player = AVPlayer(url: episode.audioURL)
       self.player?.play()
       self.updateNowPlaying(isPlaying: true)
@@ -63,6 +75,25 @@ private final class CarPlayAudioController {
   func resume() {
     player?.play()
     updateNowPlaying(isPlaying: true)
+  }
+
+  private func beginPlaybackRequest() -> Int {
+    playbackRequestID += 1
+    return playbackRequestID
+  }
+
+  private func prepareForPlaybackRequest(_ requestID: Int) {
+    DispatchQueue.main.async {
+      guard requestID == self.playbackRequestID else { return }
+      self.stopCurrentPlayer()
+      self.updateNowPlaying(isPlaying: false)
+    }
+  }
+
+  private func stopCurrentPlayer() {
+    player?.pause()
+    player?.replaceCurrentItem(with: nil)
+    player = nil
   }
 
   private func configureSession() {
@@ -184,17 +215,84 @@ private final class CarPlayAudioController {
 private final class CarPlayDataService {
   static let fallbackLiveURL = URL(string: "https://stream4.xdevel.com/audio0s978435-2634/stream/icecast.audio")!
   static let configURL = URL(string: "https://ladyradio.it/stream_conf/config.json")!
+  static let scheduleURL = URL(string: "https://www.ladyradio.it/wp-json/ladyapp/v1/schedule")!
 
   static let programs: [CarPlayProgram] = [
-    CarPlayProgram(title: "Radio Viola", category: "Sport", feedURL: URL(string: "https://www.spreaker.com/show/6929484/episodes/feed")!, artwork: "cover/radioviola.jpg"),
-    CarPlayProgram(title: "GR del Mattino", category: "Cronaca", feedURL: URL(string: "https://www.spreaker.com/show/6927806/episodes/feed")!, artwork: "cover/grdelmattino.jpg"),
-    CarPlayProgram(title: "Artemio", category: "Sport", feedURL: URL(string: "https://www.spreaker.com/show/6864279/episodes/feed")!, artwork: "cover/artemio.jpg"),
-    CarPlayProgram(title: "Il quotidiano dei quartieri", category: "Cronaca", feedURL: URL(string: "https://www.spreaker.com/show/6927829/episodes/feed")!, artwork: "cover/quotidianodeiquartieri.jpg"),
-    CarPlayProgram(title: "50100 - Le vie di Firenze", category: "Cronaca", feedURL: URL(string: "https://www.spreaker.com/show/6927797/episodes/feed")!, artwork: "https://d3wo5wojvuv7l.cloudfront.net/t_rss_itunes_square_1400/images.spreaker.com/original/df20a029014a2ab1c15bd673b09ce967.jpg"),
-    CarPlayProgram(title: "Caffe Viola", category: "Sport", feedURL: URL(string: "https://www.spreaker.com/show/6927772/episodes/feed")!, artwork: "cover/caffeviola.jpg"),
-    CarPlayProgram(title: "Le bombe delle sei", category: "Sport", feedURL: URL(string: "https://www.spreaker.com/show/6927819/episodes/feed")!, artwork: "cover/lebombedellesei.jpg"),
-    CarPlayProgram(title: "Prima Pagina Viola", category: "Sport", feedURL: URL(string: "https://www.spreaker.com/show/6927825/episodes/feed")!, artwork: "cover/primapaginaviola.jpg")
+    CarPlayProgram(title: "Radio Viola", category: "Sport", feedURL: URL(string: "https://www.spreaker.com/show/6929484/episodes/feed")!, artwork: "cover/radioviola.jpg", isPodcast: false, podcastCategory: ""),
+    CarPlayProgram(title: "GR del Mattino", category: "Cronaca", feedURL: URL(string: "https://www.spreaker.com/show/6927806/episodes/feed")!, artwork: "cover/grdelmattino.jpg", isPodcast: false, podcastCategory: ""),
+    CarPlayProgram(title: "Artemio", category: "Sport", feedURL: URL(string: "https://www.spreaker.com/show/6864279/episodes/feed")!, artwork: "cover/artemio.jpg", isPodcast: false, podcastCategory: ""),
+    CarPlayProgram(title: "Il quotidiano dei quartieri", category: "Cronaca", feedURL: URL(string: "https://www.spreaker.com/show/6927829/episodes/feed")!, artwork: "cover/quotidianodeiquartieri.jpg", isPodcast: false, podcastCategory: ""),
+    CarPlayProgram(title: "50100 - Le vie di Firenze", category: "Cronaca", feedURL: URL(string: "https://www.spreaker.com/show/6927797/episodes/feed")!, artwork: "https://d3wo5wojvuv7l.cloudfront.net/t_rss_itunes_square_1400/images.spreaker.com/original/df20a029014a2ab1c15bd673b09ce967.jpg", isPodcast: false, podcastCategory: ""),
+    CarPlayProgram(title: "Caffe Viola", category: "Sport", feedURL: URL(string: "https://www.spreaker.com/show/6927772/episodes/feed")!, artwork: "cover/caffeviola.jpg", isPodcast: false, podcastCategory: ""),
+    CarPlayProgram(title: "Le bombe delle sei", category: "Sport", feedURL: URL(string: "https://www.spreaker.com/show/6927819/episodes/feed")!, artwork: "cover/lebombedellesei.jpg", isPodcast: false, podcastCategory: ""),
+    CarPlayProgram(title: "Prima Pagina Viola", category: "Sport", feedURL: URL(string: "https://www.spreaker.com/show/6927825/episodes/feed")!, artwork: "cover/primapaginaviola.jpg", isPodcast: false, podcastCategory: "")
   ]
+
+  static func fetchPrograms(completion: @escaping ([CarPlayProgram]) -> Void) {
+    var components = URLComponents(url: scheduleURL, resolvingAgainstBaseURL: false)
+    components?.queryItems = [URLQueryItem(name: "_", value: "\(Int(Date().timeIntervalSince1970))")]
+    var request = URLRequest(url: components?.url ?? scheduleURL)
+    request.timeoutInterval = 10
+    request.setValue("LadyRadioApp/1.0", forHTTPHeaderField: "User-Agent")
+    request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
+
+    URLSession.shared.dataTask(with: request) { data, _, _ in
+      guard
+        let data,
+        let rawItems = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]]
+      else {
+        DispatchQueue.main.async { completion(programs) }
+        return
+      }
+
+      var seen = Set<String>()
+      let parsedPrograms: [CarPlayProgram] = rawItems.compactMap { item in
+        let postId = stringValue(item["postId"]) ?? stringValue(item["id"]) ?? UUID().uuidString
+        guard !seen.contains(postId) else { return nil }
+        seen.insert(postId)
+
+        guard
+          let title = stringValue(item["title"]),
+          let feed = stringValue(item["rssFeed"]),
+          let feedURL = URL(string: feed),
+          !title.isEmpty,
+          !feed.isEmpty
+        else {
+          return nil
+        }
+
+        return CarPlayProgram(
+          title: title,
+          category: stringValue(item["category"]) ?? "",
+          feedURL: feedURL,
+          artwork: stringValue(item["imageUrl"]) ?? stringValue(item["image"]),
+          isPodcast: boolValue(item["isPodcast"]) || boolValue(item["is_podcast"]),
+          podcastCategory: stringValue(item["podcastCategory"]) ?? stringValue(item["podcast_category"]) ?? ""
+        )
+      }
+
+      DispatchQueue.main.async { completion(parsedPrograms.isEmpty ? programs : parsedPrograms) }
+    }.resume()
+  }
+
+  private static func stringValue(_ value: Any?) -> String? {
+    guard let value else { return nil }
+    if let string = value as? String {
+      let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
+      return trimmed.isEmpty ? nil : trimmed
+    }
+    if let number = value as? NSNumber {
+      return number.stringValue
+    }
+    return nil
+  }
+
+  private static func boolValue(_ value: Any?) -> Bool {
+    if let bool = value as? Bool { return bool }
+    if let number = value as? NSNumber { return number.boolValue }
+    guard let string = value as? String else { return false }
+    return ["1", "true", "yes", "si", "sì"].contains(string.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
+  }
 
   static func fetchLiveStreamURL(completion: @escaping (URL) -> Void) {
     var request = URLRequest(url: configURL)
@@ -333,7 +431,7 @@ private final class CarPlayRSSParser: NSObject, XMLParserDelegate {
   func parser(_ parser: XMLParser, didEndElement elementName: String, namespaceURI: String?, qualifiedName qName: String?) {
     if elementName.lowercased() == "item" {
       if let url = URL(string: currentAudioURL), !currentTitle.isEmpty {
-        let detail = [formatDate(currentDate), currentDuration]
+        let detail = [formatDate(currentDate), normalizedDuration(currentDuration)]
           .compactMap { $0?.isEmpty == false ? $0 : nil }
           .joined(separator: " - ")
 
@@ -371,6 +469,29 @@ private final class CarPlayRSSParser: NSObject, XMLParserDelegate {
     output.dateStyle = .medium
     output.timeStyle = .none
     return output.string(from: date)
+  }
+
+  private func normalizedDuration(_ rawValue: String) -> String? {
+    let value = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !value.isEmpty, value != "0", value != "1" else { return nil }
+
+    if value.contains(":") {
+      return value
+    }
+
+    guard let seconds = Int(value), seconds > 59 else {
+      return nil
+    }
+
+    let hours = seconds / 3600
+    let minutes = (seconds % 3600) / 60
+    let remainingSeconds = seconds % 60
+
+    if hours > 0 {
+      return String(format: "%d:%02d:%02d", hours, minutes, remainingSeconds)
+    }
+
+    return String(format: "%d:%02d", minutes, remainingSeconds)
   }
 }
 
@@ -429,8 +550,48 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
   }
 
   private func makePodcastsTemplate() -> CPListTemplate {
-    let items = CarPlayDataService.programs.map { program in
-      let item = CPListItem(text: program.title, detailText: program.category)
+    let loading = CPListItem(text: "Caricamento...", detailText: nil)
+    let template = CPListTemplate(title: "Podcast", sections: [CPListSection(items: [loading])])
+    template.tabTitle = "Podcast"
+    template.tabSystemItem = .mostRecent
+
+    CarPlayDataService.fetchPrograms { [weak self, weak template] programs in
+      guard let self, let template else { return }
+      template.updateSections([CPListSection(items: self.makePodcastRootItems(programs))])
+    }
+
+    return template
+  }
+
+  private func makePodcastRootItems(_ programs: [CarPlayProgram]) -> [CPListItem] {
+    let replayPrograms = programs.filter { !$0.isPodcast }
+    let podcastPrograms = programs.filter { $0.isPodcast }
+
+    let replayItem = CPListItem(text: "Riascolta le trasmissioni", detailText: "Tutte le trasmissioni di Lady Radio")
+    replayItem.accessoryType = .disclosureIndicator
+    replayItem.handler = { [weak self] _, completion in
+      self?.showPrograms(title: "Riascolta le trasmissioni", programs: replayPrograms)
+      completion()
+    }
+
+    var items = [replayItem]
+
+    if !podcastPrograms.isEmpty {
+      let podcastItem = CPListItem(text: "Ascolta i nostri podcast", detailText: "Podcast e categorie")
+      podcastItem.accessoryType = .disclosureIndicator
+      podcastItem.handler = { [weak self] _, completion in
+        self?.showPodcastPrograms(podcastPrograms)
+        completion()
+      }
+      items.append(podcastItem)
+    }
+
+    return items
+  }
+
+  private func showPrograms(title: String, programs: [CarPlayProgram]) {
+    let items = programs.map { program in
+      let item = CPListItem(text: program.title, detailText: carPlayDetailText(program.category))
       item.accessoryType = .disclosureIndicator
       item.handler = { [weak self] _, completion in
         self?.showEpisodes(for: program)
@@ -439,10 +600,46 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
       return item
     }
 
-    let template = CPListTemplate(title: "Podcast", sections: [CPListSection(items: items)])
-    template.tabTitle = "Podcast"
-    template.tabSystemItem = .mostRecent
-    return template
+    let template = CPListTemplate(title: title, sections: [CPListSection(items: items)])
+    template.emptyViewTitleVariants = ["Nessuna trasmissione"]
+    interfaceController?.pushTemplate(template, animated: true) { _, error in
+      if let error {
+        print("[CarPlay] push programs error: \(error)")
+      }
+    }
+  }
+
+  private func showPodcastPrograms(_ programs: [CarPlayProgram]) {
+    let hasCategories = programs.contains { !$0.podcastCategory.isEmpty }
+    guard hasCategories else {
+      showPrograms(title: "Ascolta i nostri podcast", programs: programs)
+      return
+    }
+
+    var grouped: [String: [CarPlayProgram]] = [:]
+    for program in programs {
+      let category = program.podcastCategory.isEmpty ? "Altri podcast" : program.podcastCategory
+      grouped[category, default: []].append(program)
+    }
+
+    let items = grouped.keys.sorted().map { category in
+      let categoryPrograms = grouped[category] ?? []
+      let item = CPListItem(text: category, detailText: nil)
+      item.accessoryType = .disclosureIndicator
+      item.handler = { [weak self] _, completion in
+        self?.showPrograms(title: category, programs: categoryPrograms)
+        completion()
+      }
+      return item
+    }
+
+    let template = CPListTemplate(title: "Ascolta i nostri podcast", sections: [CPListSection(items: items)])
+    template.emptyViewTitleVariants = ["Nessun podcast"]
+    interfaceController?.pushTemplate(template, animated: true) { _, error in
+      if let error {
+        print("[CarPlay] push podcast categories error: \(error)")
+      }
+    }
   }
 
   private func makeFavoritesTemplate() -> CPListTemplate {
@@ -475,7 +672,7 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
 
   private func makeEpisodeItems(_ episodes: [CarPlayEpisode]) -> [CPListItem] {
     episodes.prefix(Int(CPListTemplate.maximumItemCount)).map { episode in
-      let item = CPListItem(text: episode.title, detailText: episode.detail ?? episode.program)
+      let item = CPListItem(text: episode.title, detailText: carPlayDetailText(episode.detail) ?? episode.program)
       item.accessoryType = .disclosureIndicator
       item.handler = { [weak self] _, completion in
         CarPlayAudioController.shared.play(episode)
@@ -484,6 +681,13 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
       }
       return item
     }
+  }
+
+  private func carPlayDetailText(_ rawValue: String?) -> String? {
+    guard let rawValue else { return nil }
+    let value = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !value.isEmpty, Int(value) == nil else { return nil }
+    return value
   }
 
   private func showNowPlaying() {

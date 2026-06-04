@@ -39,7 +39,7 @@ class BottomNavBar extends StatelessWidget {
                 1,
                 Icons.play_circle_outline,
                 Icons.play_circle,
-                'Live',
+                'Diretta',
               ),
               _buildNavItem(2, Icons.radio_outlined, Icons.radio, 'Ascoltaci'),
               _buildNavItem(
@@ -67,7 +67,7 @@ class BottomNavBar extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -81,11 +81,13 @@ class BottomNavBar extends StatelessWidget {
             const SizedBox(height: 4),
             AnimatedOpacity(
               duration: const Duration(milliseconds: 200),
-              opacity: isSelected ? 1.0 : 0.0,
+              opacity: 1.0,
               child: Text(
                 label,
                 style: TextStyle(
-                  color: AppTheme.primaryColor,
+                  color: isSelected
+                      ? AppTheme.primaryColor
+                      : AppTheme.textSecondary,
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),

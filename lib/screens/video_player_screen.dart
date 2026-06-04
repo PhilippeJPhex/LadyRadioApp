@@ -4,6 +4,7 @@ import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
+import 'package:video_player_pip/video_player_pip_platform_interface.dart';
 import '../core/app_theme.dart';
 import '../main.dart';
 import '../widgets/global_mini_player.dart';
@@ -30,12 +31,20 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   bool _videoControllerCreated = false;
   bool _isLoading = true;
   bool _hasError = false;
+  bool _isPreparingPip = false;
+  bool _pipPrepared = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    audioHandler?.pause();
+    isVideoPlayerVisible.value = true;
+    SystemChrome.setPreferredOrientations(const [
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    audioHandler?.stop();
     _audioPlaybackSubscription = audioHandler?.playbackState.listen((state) {
       if (state.playing &&
           _videoControllerCreated &&
@@ -55,6 +64,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
           'User-Agent':
               'LadyRadioApp/1.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)',
         },
+        viewType: VideoViewType.platformView,
+        videoPlayerOptions: VideoPlayerOptions(allowBackgroundPlayback: true),
       );
       _videoControllerCreated = true;
 
@@ -68,10 +79,15 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
         allowMuting: true,
         showControls: true,
         deviceOrientationsOnEnterFullScreen: const [
+          DeviceOrientation.portraitUp,
           DeviceOrientation.landscapeLeft,
           DeviceOrientation.landscapeRight,
         ],
-        deviceOrientationsAfterFullScreen: DeviceOrientation.values,
+        deviceOrientationsAfterFullScreen: const [
+          DeviceOrientation.portraitUp,
+          DeviceOrientation.landscapeLeft,
+          DeviceOrientation.landscapeRight,
+        ],
         materialProgressColors: ChewieProgressColors(
           playedColor: AppTheme.primaryColor,
           handleColor: AppTheme.accentColor,
@@ -90,6 +106,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
         });
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _syncFullScreenWithOrientation();
+          _preparePictureInPicture();
+        });
+        Future<void>.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) _preparePictureInPicture();
         });
       }
     } catch (e) {
@@ -108,6 +128,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       _isLoading = true;
       _hasError = false;
     });
+    _pipPrepared = false;
 
     if (_videoControllerCreated) {
       await _videoController.dispose();
@@ -124,6 +145,54 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _syncFullScreenWithOrientation();
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    if (state == AppLifecycleState.resumed) {
+      _pipPrepared = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _preparePictureInPicture();
+      });
+    }
+  }
+
+  Future<void> _preparePictureInPicture() async {
+    if (_pipPrepared ||
+        _isPreparingPip ||
+        !_videoControllerCreated ||
+        !_videoController.value.isInitialized) {
+      return;
+    }
+
+    _isPreparingPip = true;
+    try {
+      final pipPlatform = VideoPlayerPipPlatform.instance;
+      final isSupported = await pipPlatform.isPipSupported();
+      if (!isSupported) return;
+
+      final aspectRatio = _videoController.value.aspectRatio;
+      if (aspectRatio <= 0) return;
+
+      const width = 320;
+      final height = (width / aspectRatio).round();
+
+      final prepared = await pipPlatform.preparePipMode(
+        (_videoController as dynamic).playerId as int,
+        width: width,
+        height: height,
+        title: 'Lady Radio Live',
+        artist: 'Lady Radio',
+        artwork: 'LadyRadioCover',
+      );
+      _pipPrepared = prepared;
+    } catch (error) {
+      debugPrint('Errore preparazione PiP Lady TV: $error');
+    } finally {
+      _isPreparingPip = false;
+    }
   }
 
   void _syncFullScreenWithOrientation() {
@@ -145,6 +214,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    isVideoPlayerVisible.value = false;
     _audioPlaybackSubscription?.cancel();
     _chewieController?.dispose();
     if (_videoControllerCreated) {
@@ -154,7 +224,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       SystemUiMode.manual,
       overlays: SystemUiOverlay.values,
     );
-    SystemChrome.setPreferredOrientations(DeviceOrientation.values);
+    SystemChrome.setPreferredOrientations(const [DeviceOrientation.portraitUp]);
     super.dispose();
   }
 

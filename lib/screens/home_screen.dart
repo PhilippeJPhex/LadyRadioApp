@@ -9,9 +9,11 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../models/rss_episode.dart';
 import 'program_screen.dart';
 import 'podcast_screen.dart';
+import 'podcast_programs_screen.dart';
 import 'schedule_screen.dart';
 import '../widgets/campaign_banner.dart';
 import '../widgets/global_mini_player.dart';
+import '../widgets/twitch_events_slider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -60,7 +62,7 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: EdgeInsets.only(top: isMiniPlayerVisible ? 10 : 0),
               child: RefreshIndicator(
                 onRefresh: () async {
-                  _viewModel.refresh();
+                  await _viewModel.refresh();
                 },
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
@@ -89,25 +91,48 @@ class _HomeScreenState extends State<HomeScreen> {
                               'IL NOSTRO PALINSESTO',
                               style: TextStyle(
                                 fontWeight: FontWeight.w900,
-                                fontSize: 18,
+                                fontSize: 16,
                                 color: AppTheme.primaryColor,
                                 letterSpacing: 1.2,
                               ),
                             ),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.arrow_forward_ios,
-                                size: 16,
-                                color: AppTheme.primaryColor,
-                              ),
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const ScheduleScreen(),
+                            Material(
+                              color: AppTheme.primaryColor,
+                              borderRadius: BorderRadius.circular(22),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(22),
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const ScheduleScreen(),
+                                    ),
+                                  );
+                                },
+                                child: const SizedBox(
+                                  width: 86,
+                                  height: 40,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'Scopri',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                      SizedBox(width: 6),
+                                      Icon(
+                                        Icons.arrow_forward_ios,
+                                        size: 13,
+                                        color: Colors.white,
+                                      ),
+                                    ],
                                   ),
-                                );
-                              },
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -222,13 +247,100 @@ class _HomeScreenState extends State<HomeScreen> {
                         },
                       ),
 
+                      const TwitchEventsSlider(),
+
+                      ListenableBuilder(
+                        listenable: _viewModel,
+                        builder: (context, _) {
+                          if (_viewModel.podcastPrograms.isEmpty) {
+                            return const SizedBox.shrink();
+                          }
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 32),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16.0,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text(
+                                      'I NOSTRI PODCAST',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 16,
+                                        color: AppTheme.primaryColor,
+                                        letterSpacing: 1.2,
+                                      ),
+                                    ),
+                                    Material(
+                                      color: AppTheme.primaryColor,
+                                      borderRadius: BorderRadius.circular(22),
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(22),
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  PodcastProgramsScreen(
+                                                    podcastPrograms: _viewModel
+                                                        .podcastPrograms,
+                                                  ),
+                                            ),
+                                          );
+                                        },
+                                        child: const SizedBox(
+                                          width: 86,
+                                          height: 40,
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Text(
+                                                'Scopri',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.w800,
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                              SizedBox(width: 6),
+                                              Icon(
+                                                Icons.arrow_forward_ios,
+                                                size: 13,
+                                                color: Colors.white,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              _buildProgramPreviewList(
+                                context,
+                                _viewModel.podcastPrograms,
+                                showSchedule: false,
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+
                       const SizedBox(height: 32),
 
-                      // Ultimi Podcast (Verticale)
+                      // Ultime Trasmissioni (Verticale)
                       const Padding(
                         padding: EdgeInsets.symmetric(horizontal: 16.0),
                         child: Text(
-                          'ULTIMI PODCAST',
+                          'ULTIME TRASMISSIONI',
                           style: TextStyle(
                             fontWeight: FontWeight.w900,
                             fontSize: 18,
@@ -255,7 +367,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           if (_viewModel.latestEpisodes.isEmpty) {
                             return const Padding(
                               padding: EdgeInsets.all(16.0),
-                              child: Text('Nessun podcast recente.'),
+                              child: Text('Nessuna trasmissione recente.'),
                             );
                           }
                           return Padding(
@@ -272,6 +384,79 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildProgramPreviewList(
+    BuildContext context,
+    List<Map<String, dynamic>> programs, {
+    required bool showSchedule,
+  }) {
+    return SizedBox(
+      height: 100,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: programs.length,
+        itemBuilder: (context, index) {
+          final program = programs[index];
+          return GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ProgramScreen(programData: program),
+                ),
+              );
+            },
+            child: Container(
+              margin: const EdgeInsets.only(right: 16),
+              padding: const EdgeInsets.all(12),
+              width: 220,
+              decoration: AppTheme.chipDecoration.copyWith(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: _buildProgramImage(program['image'], 50),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          program['title'] ?? '',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (showSchedule) ...[
+                          Text(
+                            program['schedule'] ?? '',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.textSecondary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           );
@@ -339,6 +524,8 @@ class _HomeScreenState extends State<HomeScreen> {
       'image': program['image'] ?? AppConstants.logoAsset,
       'audioUrl': ep.audioUrl,
       'rssFeed': program['rssFeed'], // Passiamo il feed RSS
+      'isPodcast': program['isPodcast'] ?? false,
+      'urlVideo': ep.videoUrl,
     };
 
     return Padding(

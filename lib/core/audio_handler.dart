@@ -10,9 +10,10 @@ import '../data/schedule_service.dart';
 import '../data/config_service.dart';
 import '../data/favorites_service.dart';
 
-class CustomAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
+class CustomAudioHandler extends BaseAudioHandler
+    with QueueHandler, SeekHandler {
   final AudioPlayer _player = AudioPlayer();
-  
+
   final RssService _rssService = RssService();
   final ConfigService _configService = ConfigService();
   final ScheduleService _scheduleService = ScheduleService();
@@ -21,15 +22,99 @@ class CustomAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
   static const String liveItemKey = 'live-stream';
   static const String liveFolderKey = 'live-folder';
   static const String podcastFolderKey = 'podcast-folder';
+  static const String replayProgramsFolderKey = 'replay-programs-folder';
+  static const String podcastProgramsFolderKey = 'podcast-programs-folder';
+  static const String podcastCategoryFolderPrefix = 'podcast-category-';
+  static const String uncategorizedPodcastCategoryKey = 'altri_podcast';
   static const String favoritesFolderKey = 'favorites-folder';
 
   final ladyLogoUri = Uri.parse('asset:///assets/lady512.png');
-  final ladyRemoteLogo = 'https://www.ladyradio.it/wp-content/uploads/2026/04/lady512.png';
-
+  final ladyCarLogoUri = Uri.parse(
+    'android.resource://com.toscanapost.ladyr/drawable/lady512_car',
+  );
   final Map<String, MediaItem> _itemsCache = {};
+  bool _shouldHideMediaNotification = true;
 
   Stream<Duration> get positionStream => _player.positionStream;
   Stream<Duration?> get durationStream => _player.durationStream;
+
+  Uri _artUriFromValue(dynamic value) {
+    final image = value?.toString();
+    if (image == null || image.isEmpty) return ladyLogoUri;
+    if (image.startsWith('http') || image.startsWith('asset://')) {
+      return Uri.parse(image);
+    }
+    return Uri.parse('asset:///$image');
+  }
+
+  bool _isPodcastProgram(Map<String, dynamic> program) {
+    final value = program['isPodcast'] ?? program['is_podcast'];
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) {
+      return [
+        '1',
+        'true',
+        'yes',
+        'si',
+        'sì',
+      ].contains(value.trim().toLowerCase());
+    }
+    return false;
+  }
+
+  String _podcastCategoryFor(Map<String, dynamic> program) {
+    return (program['podcastCategory'] ?? '').toString().trim();
+  }
+
+  String? _androidAutoDetailText(dynamic value) {
+    final detail = value?.toString().trim();
+    if (detail == null || detail.isEmpty || int.tryParse(detail) != null) {
+      return null;
+    }
+    return detail;
+  }
+
+  String _categoryKey(String value) {
+    final normalized = value
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+        .replaceAll(RegExp(r'^_+|_+$'), '');
+    return normalized.isEmpty ? uncategorizedPodcastCategoryKey : normalized;
+  }
+
+  List<Map<String, dynamic>> _podcastProgramsFrom(
+    List<Map<String, dynamic>> programs,
+  ) {
+    return programs
+        .where(_isPodcastProgram)
+        .where((p) => (p['rssFeed'] as String? ?? '').isNotEmpty)
+        .toList();
+  }
+
+  MediaItem _podcastProgramItem(Map<String, dynamic> program) {
+    final artUriStr = program['image']?.toString();
+    final artUri = (artUriStr != null && artUriStr.startsWith('http'))
+        ? Uri.parse(artUriStr)
+        : ladyLogoUri;
+
+    final item = MediaItem(
+      id: "PROG_${program['postId']}",
+      title: program['title'] ?? '',
+      album: _androidAutoDetailText(program['category']),
+      playable: false,
+      artUri: artUri,
+      extras: {
+        'android.media.metadata.DISPLAY_ICON_URI': artUri.toString(),
+        'android.media.metadata.ALBUM_ART_URI': artUri.toString(),
+        'android.media.browse.CONTENT_STYLE_BROWSABLE_HINT': 1,
+        'android.media.browse.CONTENT_STYLE_SUPPORTED': true,
+      },
+    );
+    _itemsCache[item.id] = item;
+    return item;
+  }
 
   CustomAudioHandler() {
     debugPrint("[AudioHandler] Costruttore avviato");
@@ -39,10 +124,8 @@ class CustomAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
   }
 
   // --- LOGICA CACHE INTELLIGENTE ---
-  
+
   Future<void> _cleanOldCache() async {
-
-
     try {
       final dir = await getTemporaryDirectory();
       final cacheDir = Directory(p.join(dir.path, 'just_audio_cache'));
@@ -76,12 +159,13 @@ class CustomAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
   }
 
   Future<void> _markAsAccessed(String url) async {
-
-
     try {
       final prefs = await SharedPreferences.getInstance();
       final fileName = Uri.parse(url).pathSegments.last;
-      await prefs.setString('cache_access_$fileName', DateTime.now().toIso8601String());
+      await prefs.setString(
+        'cache_access_$fileName',
+        DateTime.now().toIso8601String(),
+      );
     } catch (e) {
       debugPrint("[Cache] Errore mark: $e");
     }
@@ -89,7 +173,9 @@ class CustomAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 
   @override
   Future<void> onTaskRemoved() async {
-    debugPrint("[AudioHandler] Task rimosso (app chiusa dalle recenti). Fermo tutto.");
+    debugPrint(
+      "[AudioHandler] Task rimosso (app chiusa dalle recenti). Fermo tutto.",
+    );
     await stop();
     await super.onTaskRemoved();
   }
@@ -102,10 +188,10 @@ class CustomAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
       title: 'Lady Radio Live',
       album: 'Lady Radio',
       playable: true,
-      artUri: ladyLogoUri,
+      artUri: ladyCarLogoUri,
       extras: {
-        'android.media.metadata.DISPLAY_ICON_URI': 'asset:///assets/lady512.png',
-        'android.media.metadata.ALBUM_ART_URI': ladyRemoteLogo,
+        'android.media.metadata.DISPLAY_ICON_URI': ladyCarLogoUri.toString(),
+        'android.media.metadata.ALBUM_ART_URI': ladyCarLogoUri.toString(),
       },
     );
   }
@@ -131,48 +217,66 @@ class CustomAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
     _player.playbackEventStream.listen((event) {
       playbackState.add(_transformEvent(event));
     });
-    
+
     _player.icyMetadataStream.listen((metadata) {
       final currentItem = mediaItem.value;
       if (currentItem != null && currentItem.id == liveItemKey) {
-        mediaItem.add(currentItem.copyWith(
-          title: metadata?.info?.title ?? 'Lady Radio Live',
-          album: 'Lady Radio',
-          artUri: ladyLogoUri,
-        ));
+        mediaItem.add(
+          currentItem.copyWith(
+            title: metadata?.info?.title ?? 'Lady Radio Live',
+            album: 'Lady Radio',
+            artUri: currentItem.artUri ?? ladyCarLogoUri,
+          ),
+        );
       }
     });
-
-
 
     try {
       final config = await _configService.getConfig();
       if (config.streamUrl.isNotEmpty) {
-        await _player.setAudioSource(AudioSource.uri(Uri.parse(config.streamUrl)), preload: false);
+        await _player.setAudioSource(
+          AudioSource.uri(Uri.parse(config.streamUrl)),
+          preload: false,
+        );
       }
     } catch (e) {
       debugPrint("[AudioHandler] Errore stream: $e");
     }
-    
+
     await _favoritesService.init();
   }
 
   @override
-  Future<void> play() => _player.play();
+  Future<void> play() {
+    _shouldHideMediaNotification = false;
+    return _player.play();
+  }
 
   @override
   Future<void> pause() => _player.pause();
 
   @override
   Future<void> stop() async {
+    _shouldHideMediaNotification = true;
     await _player.stop();
+    mediaItem.add(null);
+    playbackState.add(
+      playbackState.value.copyWith(
+        controls: const [],
+        processingState: AudioProcessingState.idle,
+        playing: false,
+      ),
+    );
     return super.stop();
   }
 
   @override
-  Future<void> playFromMediaId(String mediaId, [Map<String, dynamic>? extras]) async {
+  Future<void> playFromMediaId(
+    String mediaId, [
+    Map<String, dynamic>? extras,
+  ]) async {
     debugPrint("[AudioHandler] playFromMediaId: $mediaId");
-    
+
     final cachedItem = _itemsCache[mediaId];
     if (cachedItem != null && cachedItem.playable == true) {
       await playMediaItem(cachedItem);
@@ -181,13 +285,13 @@ class CustomAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 
     if (mediaId == liveItemKey) {
       await playMediaItem(_itemsCache[liveItemKey]!);
-    } 
-    else if (mediaId.startsWith('http')) {
+    } else if (mediaId.startsWith('http')) {
       final item = MediaItem(
         id: mediaId,
         album: extras?['album'] ?? 'Lady Radio',
         title: extras?['title'] ?? 'Episodio',
-        artUri: ladyLogoUri,
+        artUri: _artUriFromValue(extras?['image']),
+        extras: {if (extras?['image'] != null) 'image': extras?['image']},
       );
       await playMediaItem(item);
     }
@@ -200,36 +304,51 @@ class CustomAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
   Future<void> skipToPrevious() => _player.seekToPrevious();
 
   @override
-  Future<void> fastForward() => _player.seek(_player.position + const Duration(seconds: 10));
+  Future<void> fastForward() =>
+      _player.seek(_player.position + const Duration(seconds: 10));
 
   @override
-  Future<void> rewind() => _player.seek(_player.position - const Duration(seconds: 10));
+  Future<void> rewind() =>
+      _player.seek(_player.position - const Duration(seconds: 10));
 
   @override
   Future<void> seek(Duration position) => _player.seek(position);
 
   @override
   Future<void> playMediaItem(MediaItem item) async {
+    _shouldHideMediaNotification = false;
+    await _player.stop();
+
     // Se l'item non ha una playlist ma ha un feed RSS, lo recuperiamo ora
-    if ((item.extras == null || item.extras!['playlist'] == null) && item.extras?['rssFeed'] != null) {
+    if ((item.extras == null || item.extras!['playlist'] == null) &&
+        item.extras?['rssFeed'] != null) {
       try {
-        final episodes = await _rssService.fetchPodcastEpisodes(item.extras!['rssFeed']);
+        final episodes = await _rssService.fetchPodcastEpisodes(
+          item.extras!['rssFeed'],
+        );
         final List<AudioSource> sources = [];
         int initialIndex = 0;
 
         for (int i = 0; i < episodes.length; i++) {
           final ep = episodes[i];
           final uri = Uri.parse(ep.audioUrl);
-          sources.add(LockCachingAudioSource(uri, tag: MediaItem(
-            id: ep.audioUrl,
-            album: item.album ?? 'Lady Radio',
-            title: ep.title,
-            artUri: item.artUri,
-            extras: {
-              'image': item.extras?['image'],
-              'rssFeed': item.extras?['rssFeed'],
-            },
-          )));
+          sources.add(
+            LockCachingAudioSource(
+              uri,
+              tag: MediaItem(
+                id: ep.audioUrl,
+                album: item.album ?? 'Lady Radio',
+                title: ep.title,
+                artUri: item.artUri,
+                extras: {
+                  'image': item.extras?['image'],
+                  'rssFeed': item.extras?['rssFeed'],
+                  'isPodcast': item.extras?['isPodcast'],
+                  'urlVideo': ep.videoUrl,
+                },
+              ),
+            ),
+          );
           if (ep.audioUrl == item.id) initialIndex = i;
         }
 
@@ -254,12 +373,22 @@ class CustomAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
       for (int i = 0; i < playlistData.length; i++) {
         final ep = playlistData[i];
         final uri = Uri.parse(ep['audioUrl']);
-        sources.add(LockCachingAudioSource(uri, tag: MediaItem(
-          id: ep['audioUrl'],
-          album: ep['program'] ?? 'Lady Radio',
-          title: ep['title'] ?? 'Episodio',
-          artUri: ladyLogoUri,
-        )));
+        sources.add(
+          LockCachingAudioSource(
+            uri,
+            tag: MediaItem(
+              id: ep['audioUrl'],
+              album: ep['program'] ?? 'Lady Radio',
+              title: ep['title'] ?? 'Episodio',
+              artUri: _artUriFromValue(ep['image'] ?? item.extras?['image']),
+              extras: {
+                'image': ep['image'] ?? item.extras?['image'],
+                'isPodcast': ep['isPodcast'] ?? item.extras?['isPodcast'],
+                'urlVideo': ep['urlVideo'],
+              },
+            ),
+          ),
+        );
         if (ep['audioUrl'] == item.id) initialIndex = i;
       }
 
@@ -268,27 +397,36 @@ class CustomAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
       await _player.setAudioSource(playlist, initialIndex: initialIndex);
     } else {
       // Comportamento standard per item singolo
-      mediaItem.add(item);
-  
+      if (item.id != liveItemKey) {
+        mediaItem.add(item);
+      }
 
-    try {
+      try {
         if (item.id == liveItemKey) {
           final liveItem = item.copyWith(
             title: 'Lady Radio Live',
             album: 'Lady Radio',
-            artUri: ladyLogoUri,
+            artUri: ladyCarLogoUri,
+            extras: {
+              'android.media.metadata.DISPLAY_ICON_URI': ladyCarLogoUri
+                  .toString(),
+              'android.media.metadata.ALBUM_ART_URI': ladyCarLogoUri.toString(),
+            },
           );
-          await _player.stop();
           mediaItem.add(liveItem);
           final config = await _configService.getConfig();
-          await _player.setAudioSource(AudioSource.uri(Uri.parse(config.streamUrl)));
+          await _player.setAudioSource(
+            AudioSource.uri(Uri.parse(config.streamUrl)),
+          );
         } else {
           final uri = Uri.parse(item.id);
           if (uri.scheme.startsWith('http')) {
             await _markAsAccessed(item.id);
-            await _player.setAudioSource(LockCachingAudioSource(uri));
+            await _player.setAudioSource(
+              LockCachingAudioSource(uri, tag: item),
+            );
           } else {
-            await _player.setAudioSource(AudioSource.uri(uri));
+            await _player.setAudioSource(AudioSource.uri(uri, tag: item));
           }
         }
       } catch (e) {
@@ -300,7 +438,22 @@ class CustomAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 
   PlaybackState _transformEvent(PlaybackEvent event) {
     final currentItem = mediaItem.value;
-    final isLive = currentItem != null && currentItem.id == liveItemKey;
+    final shouldPublishEmptyState =
+        _shouldHideMediaNotification || currentItem == null;
+    if (shouldPublishEmptyState) {
+      return PlaybackState(
+        controls: const [],
+        systemActions: const {},
+        androidCompactActionIndices: const [],
+        processingState: AudioProcessingState.idle,
+        playing: false,
+        updatePosition: Duration.zero,
+        bufferedPosition: Duration.zero,
+        speed: 1.0,
+      );
+    }
+
+    final isLive = currentItem.id == liveItemKey;
 
     // Aggiorniamo il MediaItem corrente se il player è passato al prossimo nella playlist
     if (_player.currentIndex != null && !isLive) {
@@ -354,44 +507,53 @@ class CustomAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
   }
 
   @override
-  Future<List<MediaItem>> getChildren(String parentId, [Map<String, dynamic>? options]) async {
+  Future<List<MediaItem>> getChildren(
+    String parentId, [
+    Map<String, dynamic>? options,
+  ]) async {
     debugPrint("[AudioHandler] getChildren: $parentId");
 
     if (parentId == AudioService.browsableRootId) {
-      const String pkg = 'it.ladyradio.lady_app'; 
+      const String pkg = 'com.toscanapost.ladyr';
       final rootItems = [
         MediaItem(
-          id: liveFolderKey, 
-          title: 'Live', 
+          id: liveFolderKey,
+          title: 'Live',
           playable: false,
           artUri: Uri.parse('android.resource://$pkg/drawable/wave'),
           extras: {
-            'android.media.metadata.DISPLAY_ICON_URI': 'android.resource://$pkg/drawable/wave',
-            'android.media.metadata.ALBUM_ART_URI': 'android.resource://$pkg/drawable/wave',
+            'android.media.metadata.DISPLAY_ICON_URI':
+                'android.resource://$pkg/drawable/wave',
+            'android.media.metadata.ALBUM_ART_URI':
+                'android.resource://$pkg/drawable/wave',
             'android.media.browse.CONTENT_STYLE_BROWSABLE_HINT': 1,
             'android.media.browse.CONTENT_STYLE_SUPPORTED': true,
           },
         ),
         MediaItem(
-          id: podcastFolderKey, 
-          title: 'Podcast', 
+          id: podcastFolderKey,
+          title: 'Podcast',
           playable: false,
           artUri: Uri.parse('android.resource://$pkg/drawable/mic'),
           extras: {
-            'android.media.metadata.DISPLAY_ICON_URI': 'android.resource://$pkg/drawable/mic',
-            'android.media.metadata.ALBUM_ART_URI': 'android.resource://$pkg/drawable/mic',
+            'android.media.metadata.DISPLAY_ICON_URI':
+                'android.resource://$pkg/drawable/mic',
+            'android.media.metadata.ALBUM_ART_URI':
+                'android.resource://$pkg/drawable/mic',
             'android.media.browse.CONTENT_STYLE_BROWSABLE_HINT': 1,
             'android.media.browse.CONTENT_STYLE_SUPPORTED': true,
           },
         ),
         MediaItem(
-          id: favoritesFolderKey, 
-          title: 'I miei preferiti', 
+          id: favoritesFolderKey,
+          title: 'I miei preferiti',
           playable: false,
           artUri: Uri.parse('android.resource://$pkg/drawable/heart'),
           extras: {
-            'android.media.metadata.DISPLAY_ICON_URI': 'android.resource://$pkg/drawable/heart',
-            'android.media.metadata.ALBUM_ART_URI': 'android.resource://$pkg/drawable/heart',
+            'android.media.metadata.DISPLAY_ICON_URI':
+                'android.resource://$pkg/drawable/heart',
+            'android.media.metadata.ALBUM_ART_URI':
+                'android.resource://$pkg/drawable/heart',
             'android.media.browse.CONTENT_STYLE_BROWSABLE_HINT': 1,
             'android.media.browse.CONTENT_STYLE_SUPPORTED': true,
           },
@@ -404,7 +566,9 @@ class CustomAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
     }
 
     if (parentId == liveFolderKey) {
-      final item = _itemsCache[liveItemKey]!.copyWith(title: 'Ascolta la diretta');
+      final item = _itemsCache[liveItemKey]!.copyWith(
+        title: 'Ascolta la diretta',
+      );
       _itemsCache[item.id] = item;
       return [item];
     }
@@ -412,10 +576,10 @@ class CustomAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
     if (parentId == favoritesFolderKey) {
       return _favoritesService.favorites.map((f) {
         final artUriStr = f['image']?.toString();
-        final artUri = (artUriStr != null && artUriStr.startsWith('http')) 
-            ? Uri.parse(artUriStr) 
+        final artUri = (artUriStr != null && artUriStr.startsWith('http'))
+            ? Uri.parse(artUriStr)
             : ladyLogoUri;
-            
+
         final item = MediaItem(
           id: f['audioUrl'] ?? '',
           title: f['title'] ?? 'Senza Titolo',
@@ -431,46 +595,146 @@ class CustomAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
         return item;
       }).toList();
     }
-    
+
     if (parentId == podcastFolderKey) {
-  
-
-    try {
+      try {
         final programs = await _scheduleService.fetchUniquePrograms();
-        return programs.where((p) => (p['rssFeed'] as String? ?? '').isNotEmpty).map((prog) {
-          final artUriStr = prog['image']?.toString();
-          final artUri = (artUriStr != null && artUriStr.startsWith('http')) 
-              ? Uri.parse(artUriStr) 
-              : ladyLogoUri;
+        final podcastPrograms = _podcastProgramsFrom(programs);
 
-          final item = MediaItem(
-            id: "PROG_${prog['postId']}",
-            title: prog['title'] ?? '',
+        final items = <MediaItem>[
+          MediaItem(
+            id: replayProgramsFolderKey,
+            title: 'Riascolta le trasmissioni',
             playable: false,
-            artUri: artUri,
+            artUri: ladyLogoUri,
             extras: {
-              'android.media.metadata.DISPLAY_ICON_URI': artUri.toString(),
-              'android.media.metadata.ALBUM_ART_URI': artUri.toString(),
+              'android.media.metadata.DISPLAY_ICON_URI': ladyLogoUri.toString(),
+              'android.media.metadata.ALBUM_ART_URI': ladyLogoUri.toString(),
+              'android.media.browse.CONTENT_STYLE_BROWSABLE_HINT': 1,
+              'android.media.browse.CONTENT_STYLE_SUPPORTED': true,
+            },
+          ),
+        ];
+
+        if (podcastPrograms.isNotEmpty) {
+          items.add(
+            MediaItem(
+              id: podcastProgramsFolderKey,
+              title: 'Ascolta i nostri podcast',
+              playable: false,
+              artUri: ladyLogoUri,
+              extras: {
+                'android.media.metadata.DISPLAY_ICON_URI': ladyLogoUri
+                    .toString(),
+                'android.media.metadata.ALBUM_ART_URI': ladyLogoUri.toString(),
+                'android.media.browse.CONTENT_STYLE_BROWSABLE_HINT': 1,
+                'android.media.browse.CONTENT_STYLE_SUPPORTED': true,
+              },
+            ),
+          );
+        }
+
+        for (final item in items) {
+          _itemsCache[item.id] = item;
+        }
+        return items;
+      } catch (e) {
+        return [];
+      }
+    }
+
+    if (parentId == replayProgramsFolderKey) {
+      try {
+        final programs = await _scheduleService.fetchUniquePrograms();
+        return programs
+            .where((program) => !_isPodcastProgram(program))
+            .where((p) => (p['rssFeed'] as String? ?? '').isNotEmpty)
+            .map(_podcastProgramItem)
+            .toList();
+      } catch (e) {
+        return [];
+      }
+    }
+
+    if (parentId == podcastProgramsFolderKey) {
+      try {
+        final programs = await _scheduleService.fetchUniquePrograms();
+        final podcastPrograms = _podcastProgramsFrom(programs);
+        final hasCategories = podcastPrograms.any(
+          (program) => _podcastCategoryFor(program).isNotEmpty,
+        );
+
+        if (!hasCategories) {
+          return podcastPrograms.map(_podcastProgramItem).toList();
+        }
+
+        final categories = <String, String>{};
+        for (final program in podcastPrograms) {
+          final category = _podcastCategoryFor(program);
+          final title = category.isEmpty ? 'Altri podcast' : category;
+          categories.putIfAbsent(_categoryKey(title), () => title);
+        }
+
+        return categories.entries.map((entry) {
+          final item = MediaItem(
+            id: '$podcastCategoryFolderPrefix${entry.key}',
+            title: entry.value,
+            playable: false,
+            artUri: ladyLogoUri,
+            extras: {
+              'android.media.metadata.DISPLAY_ICON_URI': ladyLogoUri.toString(),
+              'android.media.metadata.ALBUM_ART_URI': ladyLogoUri.toString(),
+              'android.media.browse.CONTENT_STYLE_BROWSABLE_HINT': 1,
+              'android.media.browse.CONTENT_STYLE_SUPPORTED': true,
             },
           );
           _itemsCache[item.id] = item;
           return item;
         }).toList();
-      } catch (e) { return []; }
+      } catch (e) {
+        return [];
+      }
+    }
+
+    if (parentId.startsWith(podcastCategoryFolderPrefix)) {
+      final categoryKey = parentId.replaceFirst(
+        podcastCategoryFolderPrefix,
+        '',
+      );
+
+      try {
+        final programs = await _scheduleService.fetchUniquePrograms();
+        final podcastPrograms = _podcastProgramsFrom(programs);
+        final filteredPrograms = podcastPrograms.where((program) {
+          final category = _podcastCategoryFor(program);
+          if (categoryKey == uncategorizedPodcastCategoryKey) {
+            return category.isEmpty;
+          }
+          return _categoryKey(category) == categoryKey;
+        });
+
+        return filteredPrograms.map(_podcastProgramItem).toList();
+      } catch (e) {
+        return [];
+      }
     }
 
     if (parentId.startsWith("PROG_")) {
       final postId = parentId.replaceFirst("PROG_", "");
 
-
-    try {
+      try {
         final programs = await _scheduleService.fetchUniquePrograms();
-        final program = programs.firstWhere((p) => p['postId']?.toString() == postId, orElse: () => {});
+        final program = programs.firstWhere(
+          (p) => p['postId']?.toString() == postId,
+          orElse: () => {},
+        );
         if (program.isNotEmpty) {
-          final episodes = await _rssService.fetchPodcastEpisodes(program['rssFeed']);
+          final episodes = await _rssService.fetchPodcastEpisodes(
+            program['rssFeed'],
+          );
           final artUriStr = program['image']?.toString();
-          final artUri = (artUriStr != null && artUriStr.startsWith('http')) 
-              ? Uri.parse(artUriStr) 
+          final artUri = (artUriStr != null && artUriStr.startsWith('http'))
+              ? Uri.parse(artUriStr)
               : ladyLogoUri;
 
           return episodes.map((ep) {
@@ -489,9 +753,11 @@ class CustomAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
             return item;
           }).toList();
         }
-      } catch (e) { return []; }
+      } catch (e) {
+        return [];
+      }
     }
-    
+
     return [];
   }
 }

@@ -2,24 +2,52 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../core/app_constants.dart';
 
 class CampaignBannerModel {
   final String id;
   final String imageUrl;
   final String targetUrl;
+  final bool isFallback;
 
   CampaignBannerModel({
     required this.id,
     required this.imageUrl,
     required this.targetUrl,
+    this.isFallback = false,
   });
 
   factory CampaignBannerModel.fromJson(Map<String, dynamic> json) {
     return CampaignBannerModel(
-      id: json['id'] as String,
-      imageUrl: json['imageUrl'] as String,
-      targetUrl: json['targetUrl'] as String,
+      id: json['id']?.toString() ?? '',
+      imageUrl: json['imageUrl']?.toString() ?? '',
+      targetUrl: json['targetUrl']?.toString() ?? '',
+      isFallback: _readBool(json['isFallback'] ?? json['is_fallback']),
     );
+  }
+
+  factory CampaignBannerModel.fallback() {
+    return CampaignBannerModel(
+      id: 'fallback',
+      imageUrl: AppConstants.fallbackBannerImage,
+      targetUrl: AppConstants.fallbackBannerTargetUrl,
+      isFallback: true,
+    );
+  }
+
+  static bool _readBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) {
+      return [
+        '1',
+        'true',
+        'yes',
+        'si',
+        'sì',
+      ].contains(value.trim().toLowerCase());
+    }
+    return false;
   }
 }
 
@@ -68,6 +96,11 @@ class BannerService {
       debugPrint('Errore durante il fetch del banner: $e');
       return null;
     }
+  }
+
+  CampaignBannerModel? get fallbackBanner {
+    if (AppConstants.fallbackBannerImage.trim().isEmpty) return null;
+    return CampaignBannerModel.fallback();
   }
 
   /// Chiama POST /api/track-impression

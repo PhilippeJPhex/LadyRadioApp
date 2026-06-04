@@ -23,7 +23,9 @@ class _CampaignBannerState extends State<CampaignBanner> {
   }
 
   Future<void> _loadBanner() async {
-    final banner = await _bannerService.fetchActiveBanner();
+    final banner =
+        await _bannerService.fetchActiveBanner() ??
+        _bannerService.fallbackBanner;
     if (mounted) {
       setState(() {
         _activeBanner = banner;
@@ -36,7 +38,9 @@ class _CampaignBannerState extends State<CampaignBanner> {
     if (_activeBanner == null) return;
 
     // 1. Traccia il click sul database interno (mini-gestionale WP)
-    await _bannerService.trackClick(_activeBanner!.id);
+    if (!_activeBanner!.isFallback) {
+      await _bannerService.trackClick(_activeBanner!.id);
+    }
 
     // 2. Prepara l'URL con i tag di tracciamento (UTM) per il cliente
     String originalUrl = _activeBanner!.targetUrl;
@@ -86,28 +90,44 @@ class _CampaignBannerState extends State<CampaignBanner> {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
-          child: CachedNetworkImage(
-            imageUrl: _activeBanner!.imageUrl,
-            httpHeaders: const {'Referer': 'https://www.ladyradio.it/'},
-            fit: BoxFit.contain,
-            placeholder: (context, url) =>
-                const Center(child: CircularProgressIndicator()),
-            imageBuilder: (context, imageProvider) {
-              if (!_hasTrackedImpression) {
-                _hasTrackedImpression = true;
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  _bannerService.trackImpression(_activeBanner!.id);
-                });
-              }
-              return Image(image: imageProvider, fit: BoxFit.contain);
-            },
-            errorWidget: (_, _, _) => const Center(
-              // In caso di errore nel caricamento dell'immagine sponsor (es. adblock/CORS), non mostrare nulla di rotto
-              child: SizedBox.shrink(),
-            ),
-          ),
+          child: _buildBannerImage(_activeBanner!),
         ),
       ),
     );
+  }
+
+  Widget _buildBannerImage(CampaignBannerModel banner) {
+    if (_isAssetImage(banner.imageUrl)) {
+      return Image.asset(
+        banner.imageUrl.replaceFirst('asset:///', ''),
+        fit: BoxFit.contain,
+        errorBuilder: (_, _, _) => const SizedBox.shrink(),
+      );
+    }
+
+    return CachedNetworkImage(
+      imageUrl: banner.imageUrl,
+      httpHeaders: const {'Referer': 'https://www.ladyradio.it/'},
+      fit: BoxFit.contain,
+      placeholder: (context, url) =>
+          const Center(child: CircularProgressIndicator()),
+      imageBuilder: (context, imageProvider) {
+        if (!banner.isFallback && !_hasTrackedImpression) {
+          _hasTrackedImpression = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _bannerService.trackImpression(banner.id);
+          });
+        }
+        return Image(image: imageProvider, fit: BoxFit.contain);
+      },
+      errorWidget: (_, _, _) => const Center(
+        // In caso di errore nel caricamento dell'immagine sponsor (es. adblock/CORS), non mostrare nulla di rotto
+        child: SizedBox.shrink(),
+      ),
+    );
+  }
+
+  bool _isAssetImage(String value) {
+    return value.startsWith('assets/') || value.startsWith('asset:///assets/');
   }
 }

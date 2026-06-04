@@ -91,8 +91,6 @@ class _FrequenciesScreenState extends State<FrequenciesScreen> {
                           child: _ListeningChannelCard(channel: channel),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      _buildMapSection(),
                       const SizedBox(height: 24),
                       _buildReportButton(),
                     ],
@@ -102,46 +100,6 @@ class _FrequenciesScreenState extends State<FrequenciesScreen> {
             },
           );
         },
-      ),
-    );
-  }
-
-  Widget _buildMapSection() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primaryColor.withValues(alpha: 0.08),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Copertura FM',
-            style: TextStyle(
-              color: AppTheme.textPrimary,
-              fontWeight: FontWeight.w800,
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 220,
-            width: double.infinity,
-            child: Image.asset(
-              'assets/MappaToscana-LADY.png',
-              fit: BoxFit.contain,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -321,6 +279,10 @@ class _ListeningChannelCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final canOpen = channel.url.isNotEmpty;
+    final isDab = _channelDisplayKey(channel) == 'dab';
+    final subtitle = isDab
+        ? 'Ascoltaci anche in digitale in tutta la Toscana'
+        : channel.subtitle;
 
     return Material(
       color: Colors.white,
@@ -353,11 +315,7 @@ class _ListeningChannelCard extends StatelessWidget {
                   gradient: AppTheme.brandGradient,
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(
-                  _iconFor(channel.icon),
-                  color: Colors.white,
-                  size: 25,
-                ),
+                child: _ChannelIcon(channel: channel),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -372,10 +330,10 @@ class _ListeningChannelCard extends StatelessWidget {
                         fontSize: 16,
                       ),
                     ),
-                    if (channel.subtitle.isNotEmpty) ...[
+                    if (subtitle.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text(
-                        channel.subtitle,
+                        subtitle,
                         style: const TextStyle(
                           color: AppTheme.textSecondary,
                           height: 1.25,
@@ -419,6 +377,21 @@ class _ListeningChannelCard extends StatelessWidget {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
+}
+
+class _ChannelIcon extends StatelessWidget {
+  final ListeningChannel channel;
+
+  const _ChannelIcon({required this.channel});
+
+  @override
+  Widget build(BuildContext context) {
+    final key = _channelDisplayKey(channel);
+    if (key == 'facebook') return const Center(child: _FacebookIcon());
+    if (key == 'instagram') return const Center(child: _InstagramIcon());
+
+    return Icon(_iconFor(channel.icon), color: Colors.white, size: 25);
+  }
 
   IconData _iconFor(String value) {
     switch (_normalizeChannelValue(value)) {
@@ -439,12 +412,6 @@ class _ListeningChannelCard extends StatelessWidget {
       case 'sito':
       case 'sito_web':
         return Icons.language_rounded;
-      case 'facebook':
-      case 'fb':
-      case 'instagram':
-      case 'ig':
-      case 'social':
-        return Icons.alternate_email_rounded;
       case 'car':
       case 'auto':
       case 'carplay':
@@ -460,4 +427,75 @@ class _ListeningChannelCard extends StatelessWidget {
         return Icons.headphones_rounded;
     }
   }
+}
+
+class _FacebookIcon extends StatelessWidget {
+  const _FacebookIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 25,
+      height: 25,
+      child: Center(
+        child: Text(
+          'f',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 27,
+            height: 0.92,
+            fontWeight: FontWeight.w900,
+            fontFamily: 'Arial',
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _InstagramIcon extends StatelessWidget {
+  const _InstagramIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 25,
+      height: 25,
+      child: CustomPaint(painter: _InstagramIconPainter()),
+    );
+  }
+}
+
+class _InstagramIconPainter extends CustomPainter {
+  const _InstagramIconPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.4
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final outerRect = Rect.fromLTWH(2, 2, size.width - 4, size.height - 4);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(outerRect, const Radius.circular(7)),
+      paint,
+    );
+    canvas.drawCircle(size.center(Offset.zero), size.width * 0.22, paint);
+
+    final dotPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(
+      Offset(size.width * 0.72, size.height * 0.28),
+      1.65,
+      dotPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

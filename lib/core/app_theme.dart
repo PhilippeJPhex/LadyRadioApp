@@ -8,7 +8,7 @@ class AppTheme {
   static const Color accentColor = Color(0xFFF72C5B);
   static const Color bgColor = Color(0xFFF9F5F9);
   static const Color textPrimary = Color(0xFF1A0B1A);
-  static const Color textSecondary = Color(0xFF5C4B5C);
+  static const Color textSecondary = Colors.black;
   static const Color successColor = Color(0xFF25D366); // WhatsApp green
 
   // Reusable Decorations
@@ -16,24 +16,23 @@ class AppTheme {
     Color color = Colors.white,
     double radius = 20,
     Color? shadowColor,
-  }) =>
-      BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(radius),
-        boxShadow: [
-          BoxShadow(
-            color: (shadowColor ?? primaryColor).withValues(alpha: 0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      );
+  }) => BoxDecoration(
+    color: color,
+    borderRadius: BorderRadius.circular(radius),
+    boxShadow: [
+      BoxShadow(
+        color: (shadowColor ?? primaryColor).withValues(alpha: 0.08),
+        blurRadius: 16,
+        offset: const Offset(0, 6),
+      ),
+    ],
+  );
 
   static BoxDecoration get chipDecoration => BoxDecoration(
-        color: const Color(0xFFF0E6F7),
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: primaryColor.withValues(alpha: 0.12)),
-      );
+    color: const Color(0xFFF0E6F7),
+    borderRadius: BorderRadius.circular(30),
+    border: Border.all(color: primaryColor.withValues(alpha: 0.12)),
+  );
 
   // Gradients
   static const LinearGradient brandGradient = LinearGradient(

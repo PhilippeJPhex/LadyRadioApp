@@ -6,6 +6,7 @@ import '../core/audio_handler.dart';
 import '../data/favorites_service.dart';
 
 final ValueNotifier<bool> isPodcastScreenVisible = ValueNotifier(false);
+final ValueNotifier<bool> isVideoPlayerVisible = ValueNotifier(false);
 final ValueNotifier<String?> currentPodcastPageId = ValueNotifier(null);
 final ValueNotifier<Color> globalMiniPlayerBackgroundColor = ValueNotifier(
   const Color(0xFF6A1E68),
@@ -72,11 +73,18 @@ class GlobalMiniPlayerVisibilityBuilder extends StatelessWidget {
         return ValueListenableBuilder<bool>(
           valueListenable: isPodcastScreenVisible,
           builder: (context, isPodcastVisible, _) {
-            return ValueListenableBuilder<String?>(
-              valueListenable: currentPodcastPageId,
-              builder: (context, pageId, _) {
-                final shouldHide = isPodcastVisible && pageId == mediaItem?.id;
-                return builder(context, hasActiveItem && !shouldHide);
+            return ValueListenableBuilder<bool>(
+              valueListenable: isVideoPlayerVisible,
+              builder: (context, isVideoVisible, _) {
+                return ValueListenableBuilder<String?>(
+                  valueListenable: currentPodcastPageId,
+                  builder: (context, pageId, _) {
+                    final shouldHide =
+                        isVideoVisible ||
+                        (isPodcastVisible && pageId == mediaItem?.id);
+                    return builder(context, hasActiveItem && !shouldHide);
+                  },
+                );
               },
             );
           },
@@ -95,7 +103,7 @@ class GlobalMiniPlayer extends StatelessWidget {
   Widget build(BuildContext context) {
     return ValueListenableBuilder<bool>(
       valueListenable: isPodcastScreenVisible,
-      builder: (context, isVisible, child) {
+      builder: (context, isPodcastVisible, child) {
         final handler = audioHandler;
 
         if (handler == null) return const SizedBox.shrink();
@@ -110,113 +118,121 @@ class GlobalMiniPlayer extends StatelessWidget {
               return const SizedBox.shrink();
             }
 
-            return ValueListenableBuilder<String?>(
-              valueListenable: currentPodcastPageId,
-              builder: (context, pageId, _) {
-                if (isVisible && pageId == mediaItem.id) {
-                  return const SizedBox.shrink();
-                }
+            return ValueListenableBuilder<bool>(
+              valueListenable: isVideoPlayerVisible,
+              builder: (context, isVideoVisible, _) {
+                if (isVideoVisible) return const SizedBox.shrink();
 
-                return ValueListenableBuilder<Color>(
-                  valueListenable: globalMiniPlayerBackgroundColor,
-                  builder: (context, backgroundColor, _) {
-                    return Container(
-                      color: backgroundColor,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () => onTap(mediaItem),
-                          borderRadius: BorderRadius.circular(20),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primaryColor,
+                return ValueListenableBuilder<String?>(
+                  valueListenable: currentPodcastPageId,
+                  builder: (context, pageId, _) {
+                    if (isPodcastVisible && pageId == mediaItem.id) {
+                      return const SizedBox.shrink();
+                    }
+
+                    return ValueListenableBuilder<Color>(
+                      valueListenable: globalMiniPlayerBackgroundColor,
+                      builder: (context, backgroundColor, _) {
+                        return Container(
+                          color: backgroundColor,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () => onTap(mediaItem),
                               borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Text(
-                                        'In riproduzione',
-                                        style: TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w400,
-                                        ),
-                                      ),
-                                      Text(
-                                        mediaItem.title,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
-                                  ),
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
                                 ),
-                                const SizedBox(width: 8),
-                                ListenableBuilder(
-                                  listenable: FavoritesService(),
-                                  builder: (context, _) {
-                                    final isFav = FavoritesService().isFavorite(
-                                      mediaItem.id,
-                                    );
-                                    return IconButton(
-                                      icon: Icon(
-                                        isFav
-                                            ? Icons.favorite
-                                            : Icons.favorite_border,
-                                        color: isFav
-                                            ? Colors.red
-                                            : Colors.white,
-                                        size: 20,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryColor,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Text(
+                                            'In riproduzione',
+                                            style: TextStyle(
+                                              color: Colors.white70,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w400,
+                                            ),
+                                          ),
+                                          Text(
+                                            mediaItem.title,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
                                       ),
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                      onPressed: () {
-                                        final epMap = {
-                                          'id': mediaItem.id,
-                                          'audioUrl': mediaItem.id,
-                                          'title': mediaItem.title,
-                                          'program':
-                                              mediaItem.album ?? 'Lady Radio',
-                                          'image':
-                                              mediaItem.extras?['image'] ?? '',
-                                        };
-                                        FavoritesService().toggleFavorite(
-                                          epMap,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    ListenableBuilder(
+                                      listenable: FavoritesService(),
+                                      builder: (context, _) {
+                                        final isFav = FavoritesService()
+                                            .isFavorite(mediaItem.id);
+                                        return IconButton(
+                                          icon: Icon(
+                                            isFav
+                                                ? Icons.favorite
+                                                : Icons.favorite_border,
+                                            color: isFav
+                                                ? Colors.red
+                                                : Colors.white,
+                                            size: 20,
+                                          ),
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                          onPressed: () {
+                                            final epMap = {
+                                              'id': mediaItem.id,
+                                              'audioUrl': mediaItem.id,
+                                              'title': mediaItem.title,
+                                              'program':
+                                                  mediaItem.album ??
+                                                  'Lady Radio',
+                                              'image':
+                                                  mediaItem.extras?['image'] ??
+                                                  '',
+                                            };
+                                            FavoritesService().toggleFavorite(
+                                              epMap,
+                                            );
+                                          },
                                         );
                                       },
-                                    );
-                                  },
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Icon(
+                                      Icons.open_in_new,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(width: 12),
-                                const Icon(
-                                  Icons.open_in_new,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
-                              ],
+                              ),
                             ),
                           ),
-                        ),
-                      ),
+                        );
+                      },
                     );
                   },
                 );

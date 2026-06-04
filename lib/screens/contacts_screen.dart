@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
 import '../core/app_constants.dart';
 import '../widgets/global_mini_player.dart';
+import '../widgets/whatsapp_icon.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ContactsScreen extends StatelessWidget {
@@ -11,6 +12,15 @@ class ContactsScreen extends StatelessWidget {
     final Uri url = Uri.parse(urlString);
     if (!await launchUrl(url)) {
       debugPrint('Could not launch \$url');
+    }
+  }
+
+  Future<void> _launchFeedbackEmail() async {
+    final Uri url = Uri.parse(
+      'mailto:${AppConstants.email}?subject=FEEDBACK%20APP%20LADY%20RADIO',
+    );
+    if (!await launchUrl(url)) {
+      debugPrint('Could not launch feedback email');
     }
   }
 
@@ -46,7 +56,7 @@ class ContactsScreen extends StatelessWidget {
 
                 _buildActionCard(
                   context,
-                  icon: Icons.chat_outlined,
+                  iconWidget: const WhatsAppIcon(size: 100, opacity: 0.1),
                   title:
                       '+39 ${AppConstants.whatsappNumber.replaceFirst('39', '')}',
                   subtitle: 'WhatsApp alla diretta e segnalazioni',
@@ -118,6 +128,30 @@ class ContactsScreen extends StatelessWidget {
                 ),
 
                 const SizedBox(height: 20),
+                OutlinedButton.icon(
+                  onPressed: _launchFeedbackEmail,
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: AppTheme.primaryColor,
+                    side: const BorderSide(
+                      color: AppTheme.primaryColor,
+                      width: 1.4,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                  icon: const Icon(Icons.rate_review_outlined, size: 20),
+                  label: const Text(
+                    'Dacci il tuo feedback',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(height: 12),
                 ElevatedButton.icon(
                   onPressed: () async {
                     const text =
@@ -164,6 +198,7 @@ class ContactsScreen extends StatelessWidget {
   Widget _buildActionCard(
     BuildContext context, {
     IconData? icon,
+    Widget? iconWidget,
     required String title,
     required String subtitle,
     required VoidCallback onTap,
@@ -197,6 +232,8 @@ class ContactsScreen extends StatelessWidget {
                   color: Colors.white.withValues(alpha: 0.1),
                 ),
               ),
+            if (iconWidget != null)
+              Positioned(right: -20, top: -20, child: iconWidget),
             Column(
               children: [
                 Text(

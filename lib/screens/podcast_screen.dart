@@ -8,13 +8,16 @@ import 'package:share_plus/share_plus.dart';
 import '../core/app_theme.dart';
 import '../widgets/glass_container.dart';
 import '../widgets/global_mini_player.dart';
+import '../widgets/whatsapp_icon.dart';
 import '../main.dart';
 import '../core/audio_handler.dart';
 import '../data/favorites_service.dart';
+import 'video_player_screen.dart';
 
 class PodcastScreen extends StatefulWidget {
   final Map<String, dynamic> episodeData;
-  final List<Map<String, dynamic>>? playlist; // Aggiunta playlist per navigazione
+  final List<Map<String, dynamic>>?
+  playlist; // Aggiunta playlist per navigazione
 
   const PodcastScreen({super.key, required this.episodeData, this.playlist});
 
@@ -58,6 +61,17 @@ class _PodcastScreenState extends State<PodcastScreen> {
     return state.processingState != AudioProcessingState.idle;
   }
 
+  Uri _podcastArtUri() {
+    final image = _currentEpisode['image']?.toString();
+    if (image == null || image.isEmpty) {
+      return Uri.parse('asset:///assets/lady512.png');
+    }
+    if (image.startsWith('http') || image.startsWith('asset://')) {
+      return Uri.parse(image);
+    }
+    return Uri.parse('asset:///$image');
+  }
+
   Future<void> _initAudio() async {
     _updatePageRefs();
     if (audioHandler == null) {
@@ -74,17 +88,18 @@ class _PodcastScreenState extends State<PodcastScreen> {
     await _durSub?.cancel();
     await _itemSub?.cancel();
     await _queueSub?.cancel();
-    
+
     try {
       final audioUrl = _currentEpisode['audioUrl'] as String?;
-      
+
       _stateSub = h.playbackState.listen((state) {
         if (mounted) {
           final currentId = h.mediaItem.value?.id;
           setState(() {
             _isPlaying = state.playing && currentId == audioUrl;
-            _isLoading = state.processingState == AudioProcessingState.loading || 
-                         state.processingState == AudioProcessingState.buffering;
+            _isLoading =
+                state.processingState == AudioProcessingState.loading ||
+                state.processingState == AudioProcessingState.buffering;
           });
         }
       });
@@ -94,7 +109,7 @@ class _PodcastScreenState extends State<PodcastScreen> {
         if (item != null && mounted) {
           // SE SIAMO PASSATI ALLA DIRETTA, NON AGGIORNARE LA SCHERMATA PODCAST CON I DATI LIVE
           if (item.id == CustomAudioHandler.liveItemKey) return;
-          
+
           setState(() {
             _currentEpisode = {
               'audioUrl': item.id,
@@ -102,6 +117,8 @@ class _PodcastScreenState extends State<PodcastScreen> {
               'program': item.album,
               'image': item.extras?['image'],
               'rssFeed': item.extras?['rssFeed'],
+              'isPodcast': item.extras?['isPodcast'],
+              'urlVideo': item.extras?['urlVideo'],
             };
           });
           _updatePageRefs();
@@ -122,7 +139,8 @@ class _PodcastScreenState extends State<PodcastScreen> {
       });
 
       if (audioUrl != null && audioUrl.isNotEmpty) {
-        if (customHandler.mediaItem.value?.id == audioUrl && _playerPlayingAnywhere()) {
+        if (customHandler.mediaItem.value?.id == audioUrl &&
+            _playerPlayingAnywhere()) {
           if (mounted) setState(() => _isLoading = false);
         } else {
           final item = MediaItem(
@@ -132,9 +150,12 @@ class _PodcastScreenState extends State<PodcastScreen> {
             playable: true,
             displayTitle: _currentEpisode['title'],
             displaySubtitle: _currentEpisode['program'],
+            artUri: _podcastArtUri(),
             extras: {
               'image': _currentEpisode['image'],
               'rssFeed': _currentEpisode['rssFeed'],
+              'isPodcast': _currentEpisode['isPodcast'],
+              'urlVideo': _currentEpisode['urlVideo'],
               'playlist': widget.playlist,
             },
           );
@@ -163,7 +184,7 @@ class _PodcastScreenState extends State<PodcastScreen> {
     _durSub?.cancel();
     _itemSub?.cancel();
     _queueSub?.cancel();
-    
+
     // Riaffacciamo il miniplayer quando usciamo
     // Usiamo microtask per essere sicuri che avvenga DOPO la distruzione del widget
     Future.microtask(() {
@@ -177,7 +198,7 @@ class _PodcastScreenState extends State<PodcastScreen> {
   void _togglePlayPause() {
     if (audioHandler == null) return;
     final AudioHandler h = audioHandler!;
-    
+
     if (_isPlaying) {
       h.pause();
     } else {
@@ -190,17 +211,23 @@ class _PodcastScreenState extends State<PodcastScreen> {
     final AudioHandler h = audioHandler!;
 
     if (_duration.inMilliseconds > 0 && !_isLoading) {
-      final position = Duration(milliseconds: (value * _duration.inMilliseconds).round());
+      final position = Duration(
+        milliseconds: (value * _duration.inMilliseconds).round(),
+      );
       h.seek(position);
     }
   }
-  
+
   void _skip(int seconds) {
     if (audioHandler == null) return;
     final AudioHandler h = audioHandler!;
 
     final newPos = _position + Duration(seconds: seconds);
-    h.seek(newPos < Duration.zero ? Duration.zero : (newPos > _duration ? _duration : newPos));
+    h.seek(
+      newPos < Duration.zero
+          ? Duration.zero
+          : (newPos > _duration ? _duration : newPos),
+    );
   }
 
   String _formatDuration(Duration d) {
@@ -210,10 +237,56 @@ class _PodcastScreenState extends State<PodcastScreen> {
     return "${d.inHours > 0 ? '${d.inHours}:' : ''}$twoDigitMinutes:$twoDigitSeconds";
   }
 
+  bool _isPodcastEpisode() {
+    final value = _currentEpisode['isPodcast'] ?? _currentEpisode['is_podcast'];
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) {
+      return [
+        '1',
+        'true',
+        'yes',
+        'si',
+        'sì',
+      ].contains(value.trim().toLowerCase());
+    }
+    return false;
+  }
+
+  String _videoUrl() {
+    return (_currentEpisode['urlVideo'] ?? '').toString().trim();
+  }
+
+  bool _isYouTubeUrl(String url) {
+    final host = Uri.tryParse(url)?.host.toLowerCase() ?? '';
+    return host.contains('youtube.com') || host.contains('youtu.be');
+  }
+
+  Future<void> _openEpisodeVideo() async {
+    final url = _videoUrl();
+    if (url.isEmpty) return;
+
+    if (_isYouTubeUrl(url)) {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      return;
+    }
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => VideoPlayerScreen(
+          videoUrl: url,
+          title: _currentEpisode['title'] ?? 'Lady Radio Video',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final double coverSize = size.height * 0.22; // Rimpicciolita dinamicamente
+    final showVideoButton = _isPodcastEpisode() && _videoUrl().isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -224,13 +297,21 @@ class _PodcastScreenState extends State<PodcastScreen> {
       body: Center(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(0, 20, 0, 100), // Padding generoso per centrare e staccarsi dal bottom
+          padding: const EdgeInsets.fromLTRB(
+            0,
+            20,
+            0,
+            100,
+          ), // Padding generoso per centrare e staccarsi dal bottom
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               GlassContainer(
                 width: size.width * 0.9,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -242,48 +323,71 @@ class _PodcastScreenState extends State<PodcastScreen> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppTheme.primaryColor, width: 3),
+                        border: Border.all(
+                          color: AppTheme.primaryColor,
+                          width: 3,
+                        ),
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: (_currentEpisode['image'] != null && _currentEpisode['image'].toString().startsWith('http'))
+                        child:
+                            (_currentEpisode['image'] != null &&
+                                _currentEpisode['image'].toString().startsWith(
+                                  'http',
+                                ))
                             ? CachedNetworkImage(
                                 imageUrl: _currentEpisode['image'],
                                 fit: BoxFit.contain,
-                                placeholder: (context, url) => const Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryColor)),
-                                errorWidget: (context, url, error) => Image.asset('assets/lady512.png'),
+                                placeholder: (context, url) => const Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppTheme.primaryColor,
+                                  ),
+                                ),
+                                errorWidget: (context, url, error) =>
+                                    Image.asset('assets/lady512.png'),
                               )
                             : Image.asset(
-                                _currentEpisode['image'] ?? 'assets/lady512.png',
+                                _currentEpisode['image'] ??
+                                    'assets/lady512.png',
                                 fit: BoxFit.contain,
-                                errorBuilder: (context, error, stackTrace) => Image.asset('assets/lady512.png'),
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Image.asset('assets/lady512.png'),
                               ),
                       ),
                     ),
                     const SizedBox(height: 12),
-                    
-                    // Row icone (Share + Fav + WhatsApp)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+
+                    // Azioni puntata
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 15,
+                      runSpacing: 8,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.share, size: 24), 
+                          icon: const Icon(Icons.share, size: 24),
                           onPressed: () {
-                            SharePlus.instance.share(ShareParams(
-                                text: 'Ascolta ${_currentEpisode["title"]} su Lady Radio!\n${_currentEpisode["audioUrl"]}'));
-                          }
+                            SharePlus.instance.share(
+                              ShareParams(
+                                text:
+                                    'Ascolta ${_currentEpisode["title"]} su Lady Radio!\n${_currentEpisode["audioUrl"]}',
+                              ),
+                            );
+                          },
                         ),
-                        const SizedBox(width: 15),
                         IconButton(
-                          icon: const Icon(Icons.chat, size: 24, color: AppTheme.successColor),
+                          icon: const WhatsAppIcon(size: 24),
                           onPressed: () async {
                             final title = _currentEpisode['title'] ?? '';
                             final cleanTitle = title.split('|')[0].trim();
                             final message = '[$cleanTitle]: ';
-                            
+
                             final url = AppConstants.whatsappUri(text: message);
-                            final webUrl = AppConstants.whatsappWebUri(text: message);
-                            
+                            final webUrl = AppConstants.whatsappWebUri(
+                              text: message,
+                            );
+
                             if (await canLaunchUrl(url)) {
                               await launchUrl(url);
                             } else {
@@ -291,11 +395,12 @@ class _PodcastScreenState extends State<PodcastScreen> {
                             }
                           },
                         ),
-                        const SizedBox(width: 15),
                         ListenableBuilder(
                           listenable: FavoritesService(),
                           builder: (context, _) {
-                            final isFav = FavoritesService().isFavorite(_currentEpisode['audioUrl'] ?? '');
+                            final isFav = FavoritesService().isFavorite(
+                              _currentEpisode['audioUrl'] ?? '',
+                            );
                             return IconButton(
                               icon: Icon(
                                 isFav ? Icons.favorite : Icons.favorite_border,
@@ -303,11 +408,36 @@ class _PodcastScreenState extends State<PodcastScreen> {
                                 color: isFav ? Colors.red : null,
                               ),
                               onPressed: () {
-                                FavoritesService().toggleFavorite(_currentEpisode);
+                                FavoritesService().toggleFavorite(
+                                  _currentEpisode,
+                                );
                               },
                             );
                           },
                         ),
+                        if (showVideoButton)
+                          ElevatedButton(
+                            onPressed: _openEpisodeVideo,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryColor,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 18,
+                                vertical: 9,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                            ),
+                            child: const Text(
+                              'VIDEO',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -322,26 +452,39 @@ class _PodcastScreenState extends State<PodcastScreen> {
                     const SizedBox(height: 8),
                     Text(
                       _currentEpisode['title'] ?? '',
-                      style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 14,
+                      ),
                       textAlign: TextAlign.center,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 12),
-                    
+
                     SliderTheme(
                       data: SliderTheme.of(context).copyWith(
                         activeTrackColor: AppTheme.primaryColor,
-                        inactiveTrackColor: AppTheme.primaryColor.withValues(alpha: 0.3),
+                        inactiveTrackColor: AppTheme.primaryColor.withValues(
+                          alpha: 0.3,
+                        ),
                         thumbColor: AppTheme.primaryColor,
                         trackHeight: 4.0,
-                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.0),
-                        overlayShape: const RoundSliderOverlayShape(overlayRadius: 14.0),
+                        thumbShape: const RoundSliderThumbShape(
+                          enabledThumbRadius: 6.0,
+                        ),
+                        overlayShape: const RoundSliderOverlayShape(
+                          overlayRadius: 14.0,
+                        ),
                       ),
                       child: Slider(
-                        value: _duration.inMilliseconds > 0 
-                           ? _position.inMilliseconds.clamp(0, _duration.inMilliseconds) / _duration.inMilliseconds 
-                           : 0.0,
+                        value: _duration.inMilliseconds > 0
+                            ? _position.inMilliseconds.clamp(
+                                    0,
+                                    _duration.inMilliseconds,
+                                  ) /
+                                  _duration.inMilliseconds
+                            : 0.0,
                         onChanged: _seekTo,
                       ),
                     ),
@@ -350,19 +493,31 @@ class _PodcastScreenState extends State<PodcastScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(_formatDuration(_position), style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-                          Text(_formatDuration(_duration), style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                          Text(
+                            _formatDuration(_position),
+                            style: const TextStyle(
+                              color: AppTheme.textSecondary,
+                              fontSize: 11,
+                            ),
+                          ),
+                          Text(
+                            _formatDuration(_duration),
+                            style: const TextStyle(
+                              color: AppTheme.textSecondary,
+                              fontSize: 11,
+                            ),
+                          ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 20),
-                    
+
                     // AUDIO CONTROLS SU UNA RIGA SOLA
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.replay_10, size: 32), 
+                          icon: const Icon(Icons.replay_10, size: 32),
                           onPressed: () => _skip(-10),
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                         ),
@@ -370,26 +525,43 @@ class _PodcastScreenState extends State<PodcastScreen> {
                         GestureDetector(
                           onTap: _togglePlayPause,
                           child: Container(
-                            width: 70, height: 70,
-                            decoration: BoxDecoration(color: AppTheme.primaryColor, shape: BoxShape.circle),
-                            child: _isLoading 
-                               ? const Padding(
-                                   padding: EdgeInsets.all(20.0),
-                                   child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
-                                 )
-                               : Icon(_isPlaying ? Icons.pause : Icons.play_arrow, color: Colors.white, size: 40),
+                            width: 70,
+                            height: 70,
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryColor,
+                              shape: BoxShape.circle,
+                            ),
+                            child: _isLoading
+                                ? const Padding(
+                                    padding: EdgeInsets.all(20.0),
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 3,
+                                    ),
+                                  )
+                                : Icon(
+                                    _isPlaying ? Icons.pause : Icons.play_arrow,
+                                    color: Colors.white,
+                                    size: 40,
+                                  ),
                           ),
                         ),
                         const SizedBox(width: 8),
                         IconButton(
-                          icon: const Icon(Icons.forward_10, size: 32), 
+                          icon: const Icon(Icons.forward_10, size: 32),
                           onPressed: () => _skip(10),
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
-                    const Text('www.ladyradio.it', style: TextStyle(color: AppTheme.textSecondary, fontSize: 10)),
+                    const Text(
+                      'www.ladyradio.it',
+                      style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 10,
+                      ),
+                    ),
                   ],
                 ),
               ),

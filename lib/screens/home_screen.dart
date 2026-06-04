@@ -333,52 +333,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         },
                       ),
 
-                      const SizedBox(height: 32),
-
-                      // Ultime Trasmissioni (Verticale)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16.0),
-                        child: Text(
-                          'ULTIME TRASMISSIONI',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 18,
-                            color: AppTheme.primaryColor,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ListenableBuilder(
-                        listenable: _viewModel,
-                        builder: (context, _) {
-                          if (_viewModel.isLoadingEpisodes &&
-                              _viewModel.latestEpisodes.isEmpty) {
-                            return const Padding(
-                              padding: EdgeInsets.all(32.0),
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  color: AppTheme.primaryColor,
-                                ),
-                              ),
-                            );
-                          }
-                          if (_viewModel.latestEpisodes.isEmpty) {
-                            return const Padding(
-                              padding: EdgeInsets.all(16.0),
-                              child: Text('Nessuna trasmissione recente.'),
-                            );
-                          }
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Column(
-                              children: _viewModel.latestEpisodes
-                                  .map((ep) => _buildEpisodeCard(context, ep))
-                                  .toList(),
-                            ),
-                          );
-                        },
-                      ),
+                      const SizedBox(height: 28),
+                      _buildLatestEpisodesSection(context),
                       const TwitchEventsSlider(),
                       const SizedBox(height: 24),
                       const Padding(
@@ -515,6 +471,71 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildLatestEpisodesSection(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 10),
+      padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.055),
+            blurRadius: 16,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 4),
+            child: Text(
+              'ULTIME TRASMISSIONI',
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 18,
+                color: AppTheme.primaryColor,
+                letterSpacing: 1.2,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          ListenableBuilder(
+            listenable: _viewModel,
+            builder: (context, _) {
+              if (_viewModel.isLoadingEpisodes &&
+                  _viewModel.latestEpisodes.isEmpty) {
+                return const SizedBox(
+                  height: 96,
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: AppTheme.primaryColor,
+                    ),
+                  ),
+                );
+              }
+
+              if (_viewModel.latestEpisodes.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.fromLTRB(4, 8, 4, 4),
+                  child: Text('Nessuna trasmissione recente.'),
+                );
+              }
+
+              return Column(
+                children: _viewModel.latestEpisodes
+                    .map((ep) => _buildEpisodeCard(context, ep))
+                    .toList(),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEpisodeCard(BuildContext context, RssEpisode ep) {
     final programData = _viewModel.findProgramByPostId(ep.programId ?? '');
     final fallbackProgram = _viewModel.programs.isNotEmpty
@@ -537,7 +558,7 @@ class _HomeScreenState extends State<HomeScreen> {
     };
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 24.0),
+      padding: const EdgeInsets.only(bottom: 8.0),
       child: GestureDetector(
         onTap: () {
           Navigator.push(
@@ -547,33 +568,28 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           );
         },
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Immagine podcast con ombra e arrotondamento
-            Container(
-              width: 85,
-              height: 85,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppTheme.bgColor,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
                 child:
                     (program['image'] != null &&
                         program['image'].toString().startsWith('http'))
                     ? CachedNetworkImage(
                         imageUrl: program['image'],
-                        fit: BoxFit.contain,
+                        width: 56,
+                        height: 56,
+                        fit: BoxFit.cover,
                         placeholder: (context, url) => Container(
+                          width: 56,
+                          height: 56,
                           color: Colors.white,
                           child: const Center(
                             child: CircularProgressIndicator(
@@ -584,109 +600,128 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         errorWidget: (context, url, error) => Image.asset(
                           AppConstants.logoAsset,
+                          width: 56,
+                          height: 56,
                           fit: BoxFit.contain,
                         ),
                       )
-                    : Image.asset(AppConstants.logoAsset, fit: BoxFit.contain),
+                    : Image.asset(
+                        AppConstants.logoAsset,
+                        width: 56,
+                        height: 56,
+                        fit: BoxFit.contain,
+                      ),
               ),
-            ),
-            const SizedBox(width: 16),
-            // Info Podcast
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    ep.title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: AppTheme.textPrimary,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      program['title'] ?? '',
+                      style: const TextStyle(
+                        color: AppTheme.primaryColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.4,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    const SizedBox(height: 2),
+                    Text(
+                      ep.title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        color: AppTheme.textPrimary,
+                        height: 1.18,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      ep.pubDate,
+                      style: TextStyle(
+                        color: AppTheme.textPrimary.withValues(alpha: 0.48),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Material(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.11),
+                    shape: const CircleBorder(),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.play_arrow_rounded,
+                        color: AppTheme.primaryColor,
+                        size: 24,
+                      ),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints.tightFor(
+                        width: 34,
+                        height: 34,
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                PodcastScreen(episodeData: epDataMap),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    program['title'] ?? '',
-                    style: const TextStyle(
-                      color: AppTheme.primaryColor,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      ElevatedButton.icon(
+                  ListenableBuilder(
+                    listenable: FavoritesService(),
+                    builder: (ctx, _) {
+                      final isFav = FavoritesService().isFavorite(
+                        epDataMap['audioUrl'] ?? '',
+                      );
+                      return IconButton(
+                        icon: Icon(
+                          isFav ? Icons.favorite : Icons.favorite_border,
+                          color: isFav ? Colors.red : AppTheme.primaryColor,
+                          size: 19,
+                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints.tightFor(
+                          width: 28,
+                          height: 28,
+                        ),
                         onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  PodcastScreen(episodeData: epDataMap),
+                          FavoritesService().toggleFavorite(epDataMap);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                isFav
+                                    ? 'Rimosso dai preferiti'
+                                    : 'Aggiunto ai preferiti ❤️',
+                              ),
+                              duration: const Duration(seconds: 1),
                             ),
                           );
                         },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryColor,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 8,
-                          ),
-                        ),
-                        icon: const Icon(Icons.play_circle_fill, size: 16),
-                        label: const Text(
-                          'Ascolta',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      ListenableBuilder(
-                        listenable: FavoritesService(),
-                        builder: (ctx, _) {
-                          final isFav = FavoritesService().isFavorite(
-                            epDataMap['audioUrl'] ?? '',
-                          );
-                          return IconButton(
-                            icon: Icon(
-                              isFav ? Icons.favorite : Icons.favorite_border,
-                              color: isFav ? Colors.red : AppTheme.primaryColor,
-                              size: 20,
-                            ),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            onPressed: () {
-                              FavoritesService().toggleFavorite(epDataMap);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    isFav
-                                        ? 'Rimosso dai preferiti'
-                                        : 'Aggiunto ai preferiti ❤️',
-                                  ),
-                                  duration: const Duration(seconds: 1),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    ],
+                      );
+                    },
                   ),
                 ],
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

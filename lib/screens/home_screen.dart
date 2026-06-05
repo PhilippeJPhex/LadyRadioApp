@@ -81,261 +81,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: CampaignBanner(),
                       ),
 
-                      const SizedBox(height: 16),
-
-                      // Programmi del Giorno (Orizzontale)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'IL NOSTRO PALINSESTO',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w900,
-                                fontSize: 16,
-                                color: AppTheme.primaryColor,
-                                letterSpacing: 1.2,
-                              ),
-                            ),
-                            Material(
-                              color: AppTheme.primaryColor,
-                              borderRadius: BorderRadius.circular(22),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(22),
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => const ScheduleScreen(),
-                                    ),
-                                  );
-                                },
-                                child: const SizedBox(
-                                  width: 86,
-                                  height: 40,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        'Scopri',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w800,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                      SizedBox(width: 6),
-                                      Icon(
-                                        Icons.arrow_forward_ios,
-                                        size: 13,
-                                        color: Colors.white,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ListenableBuilder(
-                        listenable: _viewModel,
-                        builder: (context, _) {
-                          if (_viewModel.isLoadingPrograms &&
-                              _viewModel.programs.isEmpty) {
-                            return const SizedBox(
-                              height: 100,
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  color: AppTheme.primaryColor,
-                                ),
-                              ),
-                            );
-                          }
-                          if (_viewModel.programs.isEmpty) {
-                            return const Padding(
-                              padding: EdgeInsets.all(16.0),
-                              child: Text('Nessun programma trovato oggi.'),
-                            );
-                          }
-                          return SizedBox(
-                            height: 100,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                              itemCount: _viewModel.programs.length,
-                              itemBuilder: (context, index) {
-                                final program = _viewModel.programs[index];
-                                return GestureDetector(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            ProgramScreen(programData: program),
-                                      ),
-                                    );
-                                  },
-                                  child: AnimatedOpacity(
-                                    opacity: 1.0,
-                                    duration: Duration(
-                                      milliseconds: 300 + index * 100,
-                                    ),
-                                    child: Container(
-                                      margin: const EdgeInsets.only(right: 16),
-                                      padding: const EdgeInsets.all(12),
-                                      width: 220,
-                                      decoration: AppTheme.chipDecoration
-                                          .copyWith(
-                                            borderRadius: BorderRadius.circular(
-                                              16,
-                                            ),
-                                          ),
-                                      child: Row(
-                                        children: [
-                                          ClipRRect(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            child: _buildProgramImage(
-                                              program['image'],
-                                              50,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Text(
-                                                  program['title'] ?? '',
-                                                  style: const TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 14,
-                                                  ),
-                                                  maxLines: 1,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                                Text(
-                                                  program['schedule'] ?? '',
-                                                  style: const TextStyle(
-                                                    fontSize: 12,
-                                                    color:
-                                                        AppTheme.textSecondary,
-                                                  ),
-                                                  maxLines: 1,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          );
-                        },
-                      ),
-
-                      ListenableBuilder(
-                        listenable: _viewModel,
-                        builder: (context, _) {
-                          if (_viewModel.podcastPrograms.isEmpty) {
-                            return const SizedBox.shrink();
-                          }
-
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 32),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16.0,
-                                ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    const Text(
-                                      'I NOSTRI PODCAST',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w900,
-                                        fontSize: 16,
-                                        color: AppTheme.primaryColor,
-                                        letterSpacing: 1.2,
-                                      ),
-                                    ),
-                                    Material(
-                                      color: AppTheme.primaryColor,
-                                      borderRadius: BorderRadius.circular(22),
-                                      child: InkWell(
-                                        borderRadius: BorderRadius.circular(22),
-                                        onTap: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                                  PodcastProgramsScreen(
-                                                    podcastPrograms: _viewModel
-                                                        .podcastPrograms,
-                                                  ),
-                                            ),
-                                          );
-                                        },
-                                        child: const SizedBox(
-                                          width: 86,
-                                          height: 40,
-                                          child: Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Text(
-                                                'Scopri',
-                                                style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.w800,
-                                                  fontSize: 13,
-                                                ),
-                                              ),
-                                              SizedBox(width: 6),
-                                              Icon(
-                                                Icons.arrow_forward_ios,
-                                                size: 13,
-                                                color: Colors.white,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              _buildProgramPreviewList(
-                                context,
-                                _viewModel.podcastPrograms,
-                                showSchedule: false,
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-
                       const SizedBox(height: 28),
                       _buildLatestEpisodesSection(context),
+                      _buildSchedulePreviewSection(context),
+                      _buildPodcastProgramsSection(context),
                       const TwitchEventsSlider(),
                       const SizedBox(height: 24),
                       const Padding(
@@ -427,6 +176,176 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildSchedulePreviewSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 28),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'IL NOSTRO PALINSESTO',
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                  color: AppTheme.primaryColor,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              Material(
+                color: AppTheme.primaryColor,
+                borderRadius: BorderRadius.circular(22),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(22),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ScheduleScreen()),
+                    );
+                  },
+                  child: const SizedBox(
+                    width: 86,
+                    height: 40,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Scopri',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13,
+                          ),
+                        ),
+                        SizedBox(width: 6),
+                        Icon(
+                          Icons.arrow_forward_ios,
+                          size: 13,
+                          color: Colors.white,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        ListenableBuilder(
+          listenable: _viewModel,
+          builder: (context, _) {
+            if (_viewModel.isLoadingPrograms && _viewModel.programs.isEmpty) {
+              return const SizedBox(
+                height: 100,
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+              );
+            }
+            if (_viewModel.programs.isEmpty) {
+              return const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text('Nessun programma trovato oggi.'),
+              );
+            }
+            return _buildProgramPreviewList(
+              context,
+              _viewModel.programs,
+              showSchedule: true,
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPodcastProgramsSection(BuildContext context) {
+    return ListenableBuilder(
+      listenable: _viewModel,
+      builder: (context, _) {
+        if (_viewModel.podcastPrograms.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 32),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'I NOSTRI PODCAST',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16,
+                      color: AppTheme.primaryColor,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  Material(
+                    color: AppTheme.primaryColor,
+                    borderRadius: BorderRadius.circular(22),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(22),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PodcastProgramsScreen(
+                              podcastPrograms: _viewModel.podcastPrograms,
+                            ),
+                          ),
+                        );
+                      },
+                      child: const SizedBox(
+                        width: 86,
+                        height: 40,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Scopri',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13,
+                              ),
+                            ),
+                            SizedBox(width: 6),
+                            Icon(
+                              Icons.arrow_forward_ios,
+                              size: 13,
+                              color: Colors.white,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildProgramPreviewList(
+              context,
+              _viewModel.podcastPrograms,
+              showSchedule: false,
+            ),
+          ],
+        );
+      },
     );
   }
 

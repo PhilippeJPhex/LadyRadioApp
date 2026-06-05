@@ -84,7 +84,7 @@ class TwitchEventModel {
     required this.status,
   });
 
-  bool get hasDisplayData => title.isNotEmpty && startDate.isNotEmpty;
+  bool get hasDisplayData => title.isNotEmpty;
   bool get hasTargetUrl => targetUrl.trim().isNotEmpty;
 
   factory TwitchEventModel.fromJson(Map<String, dynamic> json) {
@@ -129,7 +129,11 @@ class TwitchService {
 
   Future<TwitchEventsResponse> fetchEvents() async {
     try {
-      final uri = Uri.parse('$_baseUrl/twitch-events');
+      final uri = Uri.parse('$_baseUrl/twitch-events').replace(
+        queryParameters: {
+          't': DateTime.now().millisecondsSinceEpoch.toString(),
+        },
+      );
       final response = await _client
           .get(
             uri,

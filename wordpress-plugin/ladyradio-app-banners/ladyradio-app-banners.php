@@ -3,7 +3,7 @@
  * Plugin Name: Lady Radio App Banners
  * Plugin URI: https://ladyradio.it
  * Description: Gestisce i banner sponsorizzati per l'App Mobile Flutter di Lady Radio.
- * Version: 1.9.0
+ * Version: 1.9.1
  * Author: Borda AI
  * Author URI: https://ladyradio.it
  * Text Domain: ladyradio-app-banners
@@ -867,7 +867,8 @@ class LadyRadioAppBannersPlugin_190
 
     public function get_twitch_events($request)
     {
-        $cached = get_transient('lr_app_twitch_events');
+        $bypass_cache = $request->get_param('t') || $request->get_param('no_cache');
+        $cached = $bypass_cache ? false : get_transient('lr_app_twitch_events');
         if ($cached !== false) {
             return new WP_REST_Response($cached, 200);
         }
@@ -926,7 +927,7 @@ class LadyRadioAppBannersPlugin_190
         }
 
         if (empty($date_time)) {
-            return null;
+            $date_time = get_the_date('Y-m-d H:i', $post->ID);
         }
 
         $target_url = get_post_meta($post->ID, 'twitch_url', true);

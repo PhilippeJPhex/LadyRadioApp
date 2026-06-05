@@ -529,6 +529,12 @@ class LadyRadioAppBannersPlugin_190
             'permission_callback' => '__return_true', // Public
         ));
 
+        register_rest_route($namespace, '/active-banner/(?P<position>upper|bottom)', array(
+            'methods' => 'GET',
+            'callback' => array($this, 'get_active_banner'),
+            'permission_callback' => '__return_true',
+        ));
+
         // 2. POST Track Impression
         register_rest_route($namespace, '/track-impression', array(
             'methods' => 'POST',
@@ -563,6 +569,21 @@ class LadyRadioAppBannersPlugin_190
             'callback' => array($this, 'get_twitch_events'),
             'permission_callback' => '__return_true',
         ));
+
+        register_rest_route($namespace, '/app-config', array(
+            'methods' => 'GET',
+            'callback' => array($this, 'get_app_config'),
+            'permission_callback' => '__return_true',
+        ));
+    }
+
+    public function get_app_config($request)
+    {
+        $channel_url = get_option('lr_app_twitch_channel_url', '#');
+
+        return new WP_REST_Response(array(
+            'twitchChannelUrl' => $channel_url && $channel_url !== '#' ? esc_url_raw($channel_url) : '',
+        ), 200);
     }
 
     public function get_active_banner($request)
@@ -624,9 +645,13 @@ class LadyRadioAppBannersPlugin_190
 
     private function banner_position($post_id)
     {
-        $position = get_post_meta($post_id, 'banner_posizione', true);
+        $position = strtolower(trim((string) get_post_meta($post_id, 'banner_posizione', true)));
         if (empty($position)) {
             return 'upper';
+        }
+
+        if ($position === 'both' || $position === 'all') {
+            return 'entrambi';
         }
 
         if (!in_array($position, array('upper', 'bottom', 'entrambi'), true)) {

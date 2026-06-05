@@ -207,10 +207,12 @@ int _channelSortOrder(ListeningChannel channel) {
       return 3;
     case 'instagram':
       return 4;
-    case 'car':
+    case 'twitch':
       return 5;
-    case 'smart_speaker':
+    case 'car':
       return 6;
+    case 'smart_speaker':
+      return 7;
     default:
       return 99;
   }
@@ -243,6 +245,9 @@ String _channelDisplayKey(ListeningChannel channel) {
   }
   if (values.any((value) => value == 'instagram' || value == 'ig')) {
     return 'instagram';
+  }
+  if (values.any((value) => value == 'twitch')) {
+    return 'twitch';
   }
   if (values.any(
     (value) =>
@@ -418,6 +423,8 @@ class _ChannelIcon extends StatelessWidget {
         return Icons.directions_car_filled_rounded;
       case 'app':
         return Icons.phone_iphone_rounded;
+      case 'twitch':
+        return Icons.videocam_rounded;
       case 'smart_speaker':
       case 'speaker':
       case 'alexa':

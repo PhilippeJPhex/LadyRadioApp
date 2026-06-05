@@ -94,10 +94,13 @@ class BannerService {
     BannerPosition position = BannerPosition.upper,
   }) async {
     try {
-      final apiUrl = '$_baseUrl/active-banner';
-      final uri = Uri.parse(
-        apiUrl,
-      ).replace(queryParameters: {'position': position.apiValue});
+      final apiUrl = '$_baseUrl/active-banner/${position.apiValue}';
+      final uri = Uri.parse(apiUrl).replace(
+        queryParameters: {
+          'position': position.apiValue,
+          't': DateTime.now().millisecondsSinceEpoch.toString(),
+        },
+      );
 
       final response = await _client
           .get(uri, headers: _defaultHeaders)

@@ -15,6 +15,7 @@ import 'schedule_screen.dart';
 import '../widgets/campaign_banner.dart';
 import '../widgets/global_mini_player.dart';
 import '../widgets/twitch_events_slider.dart';
+import '../utils/date_text_formatter.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -643,7 +644,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      ep.pubDate,
+                      DateTextFormatter.episodeDateCapitalized(ep.pubDate),
                       style: TextStyle(
                         color: AppTheme.textPrimary.withValues(alpha: 0.48),
                         fontSize: 11,

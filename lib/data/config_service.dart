@@ -115,6 +115,8 @@ class ListeningChannel {
       case 'instagram':
       case 'ig':
         return 'Instagram';
+      case 'twitch':
+        return 'Twitch';
       case 'car':
       case 'carplay':
       case 'android_auto':
@@ -142,6 +144,7 @@ class AppConfig {
   final String facebook;
   final String instagram;
   final String dab;
+  final String twitchChannelUrl;
   final List<ListeningChannel> channels;
 
   AppConfig({
@@ -154,6 +157,7 @@ class AppConfig {
     required this.facebook,
     required this.instagram,
     required this.dab,
+    required this.twitchChannelUrl,
     required this.channels,
   });
 
@@ -194,7 +198,27 @@ class AppConfig {
       facebook: facebook,
       instagram: instagram,
       dab: dab,
+      twitchChannelUrl: '',
       channels: channels,
+    );
+  }
+
+  AppConfig copyWith({
+    String? twitchChannelUrl,
+    List<ListeningChannel>? channels,
+  }) {
+    return AppConfig(
+      streamUrl: streamUrl,
+      tvUrl: tvUrl,
+      tvText: tvText,
+      website: website,
+      whatsapp: whatsapp,
+      email: email,
+      facebook: facebook,
+      instagram: instagram,
+      dab: dab,
+      twitchChannelUrl: twitchChannelUrl ?? this.twitchChannelUrl,
+      channels: channels ?? this.channels,
     );
   }
 
@@ -306,6 +330,9 @@ class AppConfig {
     if (values.any((value) => value == 'instagram' || value == 'ig')) {
       return 'instagram';
     }
+    if (values.any((value) => value == 'twitch')) {
+      return 'twitch';
+    }
     if (values.any(
       (value) =>
           value == 'car' ||
@@ -336,6 +363,7 @@ class AppConfig {
     String tvText = '',
     String facebook = AppConstants.facebookUrl,
     String instagram = AppConstants.instagramUrl,
+    String twitchChannelUrl = '',
   }) {
     return [
       ...AppConstants.frequencies.map(
@@ -373,6 +401,15 @@ class AppConfig {
           detail: '@ladyradiofirenze',
           url: instagram,
           icon: 'instagram',
+        ),
+      if (twitchChannelUrl.isNotEmpty && twitchChannelUrl != '#')
+        ListeningChannel(
+          id: 'twitch',
+          title: 'Twitch',
+          subtitle: 'Dirette video e contenuti speciali Lady Radio',
+          detail: twitchChannelUrl.replaceAll(RegExp(r'https?://'), ''),
+          url: twitchChannelUrl,
+          icon: 'twitch',
         ),
       const ListeningChannel(
         id: 'car',
@@ -419,7 +456,17 @@ class ConfigService {
         final Map<String, dynamic> data = json.decode(
           _removeTrailingCommas(utf8.decode(response.bodyBytes)),
         );
-        _currentConfig = AppConfig.fromJson(data);
+        final baseConfig = AppConfig.fromJson(data);
+        final twitchChannelUrl = await _fetchTwitchChannelUrl();
+        _currentConfig = twitchChannelUrl.isEmpty
+            ? baseConfig
+            : baseConfig.copyWith(
+                twitchChannelUrl: twitchChannelUrl,
+                channels: _upsertTwitchChannel(
+                  baseConfig.channels,
+                  twitchChannelUrl,
+                ),
+              );
         return _currentConfig!;
       } else {
         throw Exception('Failed to load config');
@@ -437,10 +484,63 @@ class ConfigService {
         facebook: '',
         instagram: '',
         dab: '',
+        twitchChannelUrl: '',
         channels: AppConfig.fallbackChannels(),
       );
       return _currentConfig!;
     }
+  }
+
+  Future<String> _fetchTwitchChannelUrl() async {
+    try {
+      final response = await http.get(
+        Uri.parse('https://www.ladyradio.it/wp-json/ladyapp/v1/app-config'),
+        headers: const {
+          'Accept': 'application/json, text/plain, */*',
+          'Cache-Control': 'no-cache',
+        },
+      );
+
+      if (response.statusCode != 200) return '';
+
+      final data = json.decode(utf8.decode(response.bodyBytes));
+      if (data is! Map<String, dynamic>) return '';
+
+      final url = data['twitchChannelUrl']?.toString().trim() ?? '';
+      if (url.isEmpty || url == '#') return '';
+      return url;
+    } catch (_) {
+      return '';
+    }
+  }
+
+  List<ListeningChannel> _upsertTwitchChannel(
+    List<ListeningChannel> channels,
+    String twitchChannelUrl,
+  ) {
+    final twitchChannel = ListeningChannel(
+      id: 'twitch',
+      title: 'Twitch',
+      subtitle: 'Dirette video e contenuti speciali Lady Radio',
+      detail: twitchChannelUrl.replaceAll(RegExp(r'https?://'), ''),
+      url: twitchChannelUrl,
+      icon: 'twitch',
+    );
+
+    final filtered = channels
+        .where((channel) => AppConfig._channelKey(channel) != 'twitch')
+        .toList();
+
+    final instagramIndex = filtered.indexWhere(
+      (channel) => AppConfig._channelKey(channel) == 'instagram',
+    );
+    if (instagramIndex >= 0) {
+      filtered.insert(instagramIndex + 1, twitchChannel);
+      return filtered;
+    }
+
+    filtered.add(twitchChannel);
+    return filtered;
   }
 
   static String _removeTrailingCommas(String source) {

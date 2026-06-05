@@ -60,10 +60,23 @@ class DateTextFormatter {
     final parsed = _parseRssDateParts(rawDate);
     if (parsed != null) {
       final month = _monthNames[parsed.month.toLowerCase()] ?? parsed.month;
-      return '${parsed.day} $month ${parsed.year}';
+      final day = int.tryParse(parsed.day)?.toString() ?? parsed.day;
+      return '$day $month ${parsed.year}';
     }
 
     return italianizeText(rawDate);
+  }
+
+  static String episodeDateCapitalized(String rawDate) {
+    final date = episodeDate(rawDate);
+    final parts = date.split(' ');
+    if (parts.length < 3) return date;
+
+    final month = parts[1];
+    final capitalizedMonth = month.isEmpty
+        ? month
+        : month[0].toUpperCase() + month.substring(1);
+    return '${parts[0]} $capitalizedMonth ${parts[2]}';
   }
 
   static String italianizeText(String text) {

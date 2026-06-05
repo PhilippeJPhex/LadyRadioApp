@@ -156,6 +156,24 @@ class GlobalMiniPlayer extends StatelessWidget {
                                 ),
                                 child: Row(
                                   children: [
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.close_rounded,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
+                                      tooltip: 'Chiudi player',
+                                      padding: EdgeInsets.zero,
+                                      constraints:
+                                          const BoxConstraints.tightFor(
+                                            width: 28,
+                                            height: 28,
+                                          ),
+                                      onPressed: () {
+                                        handler.stop();
+                                      },
+                                    ),
+                                    const SizedBox(width: 10),
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment:

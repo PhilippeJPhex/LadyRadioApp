@@ -84,8 +84,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 28),
                       _buildLatestEpisodesSection(context),
                       _buildSchedulePreviewSection(context),
-                      _buildPodcastProgramsSection(context),
                       const TwitchEventsSlider(),
+                      _buildPodcastProgramsSection(context),
                       const SizedBox(height: 24),
                       const Padding(
                         padding: EdgeInsets.symmetric(horizontal: 16.0),

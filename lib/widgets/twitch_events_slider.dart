@@ -49,8 +49,63 @@ class _TwitchEventsSliderState extends State<TwitchEventsSlider> {
       future: _eventsFuture,
       builder: (context, snapshot) {
         final response = snapshot.data ?? TwitchEventsResponse.empty();
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: _buildHeader(response),
+                ),
+                const SizedBox(height: 14),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.0),
+                  child: SizedBox(
+                    height: 118,
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: _twitchPurple,
+                        strokeWidth: 2.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
         if (response.scheduled.isEmpty && response.completed.isEmpty) {
-          return const SizedBox.shrink();
+          return Padding(
+            padding: const EdgeInsets.only(top: 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: _buildHeader(response),
+                ),
+                const SizedBox(height: 14),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: AppTheme.cardDecoration(radius: 18),
+                    child: const Text(
+                      'Nessuna diretta Twitch programmata.',
+                      style: TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
         }
 
         final nextEvent = response.scheduled.isNotEmpty

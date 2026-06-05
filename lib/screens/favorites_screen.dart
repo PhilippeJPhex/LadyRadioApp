@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
 import '../data/favorites_service.dart';
 import '../utils/date_text_formatter.dart';
+import '../widgets/global_mini_player.dart';
 import 'podcast_screen.dart';
 
 class FavoritesScreen extends StatelessWidget {
@@ -10,138 +11,154 @@ class FavoritesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'I MIEI PREFERITI',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.2,
-            fontSize: 18,
+    return GlobalMiniPlayerVisibilityBuilder(
+      builder: (context, isMiniPlayerVisible) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text(
+              'I MIEI PREFERITI',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.2,
+                fontSize: 18,
+              ),
+            ),
+            centerTitle: true,
+            backgroundColor: AppTheme.primaryColor,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            primary: !isMiniPlayerVisible,
+            toolbarHeight: isMiniPlayerVisible ? 44 : kToolbarHeight,
           ),
-        ),
-        centerTitle: true,
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: ListenableBuilder(
-        listenable: FavoritesService(),
-        builder: (context, _) {
-          final favs = FavoritesService().favorites;
+          body: SafeArea(
+            top: !isMiniPlayerVisible,
+            child: ListenableBuilder(
+              listenable: FavoritesService(),
+              builder: (context, _) {
+                final favs = FavoritesService().favorites;
 
-          if (favs.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(40),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.favorite_border,
-                      size: 64,
-                      color: Colors.grey[300],
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Nessun preferito',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.secondaryColor,
+                if (favs.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(40),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.favorite_border,
+                            size: 64,
+                            color: Colors.grey[300],
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Nessun preferito',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.secondaryColor,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Tocca il ❤️ su una puntata per salvarla qui.',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Tocca il ❤️ su una puntata per salvarla qui.',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 14, color: Colors.black),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            itemCount: favs.length,
-            itemBuilder: (context, index) {
-              final ep = favs[index];
-              return Dismissible(
-                key: Key(ep['audioUrl'] ?? index.toString()),
-                direction: DismissDirection.endToStart,
-                background: Container(
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.only(right: 20),
-                  color: Colors.red[400],
-                  child: const Icon(Icons.delete, color: Colors.white),
-                ),
-                onDismissed: (_) {
-                  FavoritesService().removeFavorite(ep['audioUrl'] ?? '');
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('${ep['title']} rimosso dai preferiti'),
-                      duration: const Duration(seconds: 2),
-                    ),
                   );
-                },
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
+                }
+
+                return ListView.builder(
+                  padding: EdgeInsets.symmetric(
+                    vertical: isMiniPlayerVisible ? 6 : 12,
                   ),
-                  leading: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: _buildImage(ep['image'], 56),
-                  ),
-                  title: Text(
-                    ep['title'] ?? '',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  subtitle: Text(
-                    ep['program'] ??
-                        DateTextFormatter.episodeDate(ep['date'] ?? ''),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                  trailing: IconButton(
-                    icon: const Icon(
-                      Icons.play_circle_fill,
-                      color: AppTheme.primaryColor,
-                      size: 32,
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => PodcastScreen(episodeData: ep),
+                  itemCount: favs.length,
+                  itemBuilder: (context, index) {
+                    final ep = favs[index];
+                    return Dismissible(
+                      key: Key(ep['audioUrl'] ?? index.toString()),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 20),
+                        color: Colors.red[400],
+                        child: const Icon(Icons.delete, color: Colors.white),
+                      ),
+                      onDismissed: (_) {
+                        FavoritesService().removeFavorite(ep['audioUrl'] ?? '');
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              '${ep['title']} rimosso dai preferiti',
+                            ),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
                         ),
-                      );
-                    },
-                  ),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => PodcastScreen(episodeData: ep),
+                        leading: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: _buildImage(ep['image'], 56),
+                        ),
+                        title: Text(
+                          ep['title'] ?? '',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: Text(
+                          ep['program'] ??
+                              DateTextFormatter.episodeDate(ep['date'] ?? ''),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(
+                            Icons.play_circle_fill,
+                            color: AppTheme.primaryColor,
+                            size: 32,
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => PodcastScreen(episodeData: ep),
+                              ),
+                            );
+                          },
+                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PodcastScreen(episodeData: ep),
+                            ),
+                          );
+                        },
                       ),
                     );
                   },
-                ),
-              );
-            },
-          );
-        },
-      ),
+                );
+              },
+            ),
+          ),
+        );
+      },
     );
   }
 

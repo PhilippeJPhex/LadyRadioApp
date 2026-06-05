@@ -288,287 +288,309 @@ class _PodcastScreenState extends State<PodcastScreen> {
     final double coverSize = size.height * 0.22; // Rimpicciolita dinamicamente
     final showVideoButton = _isPodcastEpisode() && _videoUrl().isNotEmpty;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Lady Radio Podcast'),
-        centerTitle: true,
-        toolbarHeight: 50,
-      ),
-      body: Center(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(
-            0,
-            20,
-            0,
-            100,
-          ), // Padding generoso per centrare e staccarsi dal bottom
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              GlassContainer(
-                width: size.width * 0.9,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 16,
+    return GlobalMiniPlayerVisibilityBuilder(
+      builder: (context, isMiniPlayerVisible) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Lady Radio Podcast'),
+            centerTitle: true,
+            primary: !isMiniPlayerVisible,
+            toolbarHeight: isMiniPlayerVisible ? 44 : 50,
+          ),
+          body: SafeArea(
+            top: !isMiniPlayerVisible,
+            child: Center(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.fromLTRB(
+                  0,
+                  isMiniPlayerVisible ? 6 : 20,
+                  0,
+                  100,
                 ),
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Cover rimpicciolita
-                    Container(
-                      height: coverSize,
-                      width: coverSize,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: AppTheme.primaryColor,
-                          width: 3,
-                        ),
+                    GlassContainer(
+                      width: size.width * 0.9,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 16,
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child:
-                            (_currentEpisode['image'] != null &&
-                                _currentEpisode['image'].toString().startsWith(
-                                  'http',
-                                ))
-                            ? CachedNetworkImage(
-                                imageUrl: _currentEpisode['image'],
-                                fit: BoxFit.contain,
-                                placeholder: (context, url) => const Center(
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: AppTheme.primaryColor,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Cover rimpicciolita
+                          Container(
+                            height: coverSize,
+                            width: coverSize,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: AppTheme.primaryColor,
+                                width: 3,
+                              ),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child:
+                                  (_currentEpisode['image'] != null &&
+                                      _currentEpisode['image']
+                                          .toString()
+                                          .startsWith('http'))
+                                  ? CachedNetworkImage(
+                                      imageUrl: _currentEpisode['image'],
+                                      fit: BoxFit.contain,
+                                      placeholder: (context, url) =>
+                                          const Center(
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: AppTheme.primaryColor,
+                                            ),
+                                          ),
+                                      errorWidget: (context, url, error) =>
+                                          Image.asset('assets/lady512.png'),
+                                    )
+                                  : Image.asset(
+                                      _currentEpisode['image'] ??
+                                          'assets/lady512.png',
+                                      fit: BoxFit.contain,
+                                      errorBuilder:
+                                          (context, error, stackTrace) =>
+                                              Image.asset('assets/lady512.png'),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Azioni puntata
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 15,
+                            runSpacing: 8,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.share, size: 24),
+                                onPressed: () {
+                                  SharePlus.instance.share(
+                                    ShareParams(
+                                      text:
+                                          'Ascolta ${_currentEpisode["title"]} su Lady Radio!\n${_currentEpisode["audioUrl"]}',
+                                    ),
+                                  );
+                                },
+                              ),
+                              IconButton(
+                                icon: const WhatsAppIcon(size: 24),
+                                onPressed: () async {
+                                  final title = _currentEpisode['title'] ?? '';
+                                  final cleanTitle = title.split('|')[0].trim();
+                                  final message = '[$cleanTitle]: ';
+
+                                  final url = AppConstants.whatsappUri(
+                                    text: message,
+                                  );
+                                  final webUrl = AppConstants.whatsappWebUri(
+                                    text: message,
+                                  );
+
+                                  if (await canLaunchUrl(url)) {
+                                    await launchUrl(url);
+                                  } else {
+                                    await launchUrl(webUrl);
+                                  }
+                                },
+                              ),
+                              ListenableBuilder(
+                                listenable: FavoritesService(),
+                                builder: (context, _) {
+                                  final isFav = FavoritesService().isFavorite(
+                                    _currentEpisode['audioUrl'] ?? '',
+                                  );
+                                  return IconButton(
+                                    icon: Icon(
+                                      isFav
+                                          ? Icons.favorite
+                                          : Icons.favorite_border,
+                                      size: 24,
+                                      color: isFav ? Colors.red : null,
+                                    ),
+                                    onPressed: () {
+                                      FavoritesService().toggleFavorite(
+                                        _currentEpisode,
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
+                              if (showVideoButton)
+                                ElevatedButton(
+                                  onPressed: _openEpisodeVideo,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.primaryColor,
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 18,
+                                      vertical: 9,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'VIDEO',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
-                                errorWidget: (context, url, error) =>
-                                    Image.asset('assets/lady512.png'),
-                              )
-                            : Image.asset(
-                                _currentEpisode['image'] ??
-                                    'assets/lady512.png',
-                                fit: BoxFit.contain,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    Image.asset('assets/lady512.png'),
-                              ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            _currentEpisode['program'] ?? '',
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  color: AppTheme.primaryColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _currentEpisode['title'] ?? '',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w500,
+                              fontSize: 14,
+                            ),
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 12),
 
-                    // Azioni puntata
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 15,
-                      runSpacing: 8,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.share, size: 24),
-                          onPressed: () {
-                            SharePlus.instance.share(
-                              ShareParams(
-                                text:
-                                    'Ascolta ${_currentEpisode["title"]} su Lady Radio!\n${_currentEpisode["audioUrl"]}',
+                          SliderTheme(
+                            data: SliderTheme.of(context).copyWith(
+                              activeTrackColor: AppTheme.primaryColor,
+                              inactiveTrackColor: AppTheme.primaryColor
+                                  .withValues(alpha: 0.3),
+                              thumbColor: AppTheme.primaryColor,
+                              trackHeight: 4.0,
+                              thumbShape: const RoundSliderThumbShape(
+                                enabledThumbRadius: 6.0,
                               ),
-                            );
-                          },
-                        ),
-                        IconButton(
-                          icon: const WhatsAppIcon(size: 24),
-                          onPressed: () async {
-                            final title = _currentEpisode['title'] ?? '';
-                            final cleanTitle = title.split('|')[0].trim();
-                            final message = '[$cleanTitle]: ';
-
-                            final url = AppConstants.whatsappUri(text: message);
-                            final webUrl = AppConstants.whatsappWebUri(
-                              text: message,
-                            );
-
-                            if (await canLaunchUrl(url)) {
-                              await launchUrl(url);
-                            } else {
-                              await launchUrl(webUrl);
-                            }
-                          },
-                        ),
-                        ListenableBuilder(
-                          listenable: FavoritesService(),
-                          builder: (context, _) {
-                            final isFav = FavoritesService().isFavorite(
-                              _currentEpisode['audioUrl'] ?? '',
-                            );
-                            return IconButton(
-                              icon: Icon(
-                                isFav ? Icons.favorite : Icons.favorite_border,
-                                size: 24,
-                                color: isFav ? Colors.red : null,
-                              ),
-                              onPressed: () {
-                                FavoritesService().toggleFavorite(
-                                  _currentEpisode,
-                                );
-                              },
-                            );
-                          },
-                        ),
-                        if (showVideoButton)
-                          ElevatedButton(
-                            onPressed: _openEpisodeVideo,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primaryColor,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                                vertical: 9,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(999),
+                              overlayShape: const RoundSliderOverlayShape(
+                                overlayRadius: 14.0,
                               ),
                             ),
-                            child: const Text(
-                              'VIDEO',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            child: Slider(
+                              value: _duration.inMilliseconds > 0
+                                  ? _position.inMilliseconds.clamp(
+                                          0,
+                                          _duration.inMilliseconds,
+                                        ) /
+                                        _duration.inMilliseconds
+                                  : 0.0,
+                              onChanged: _seekTo,
                             ),
                           ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      _currentEpisode['program'] ?? '',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppTheme.primaryColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _currentEpisode['title'] ?? '',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w500,
-                        fontSize: 14,
-                      ),
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 12),
-
-                    SliderTheme(
-                      data: SliderTheme.of(context).copyWith(
-                        activeTrackColor: AppTheme.primaryColor,
-                        inactiveTrackColor: AppTheme.primaryColor.withValues(
-                          alpha: 0.3,
-                        ),
-                        thumbColor: AppTheme.primaryColor,
-                        trackHeight: 4.0,
-                        thumbShape: const RoundSliderThumbShape(
-                          enabledThumbRadius: 6.0,
-                        ),
-                        overlayShape: const RoundSliderOverlayShape(
-                          overlayRadius: 14.0,
-                        ),
-                      ),
-                      child: Slider(
-                        value: _duration.inMilliseconds > 0
-                            ? _position.inMilliseconds.clamp(
-                                    0,
-                                    _duration.inMilliseconds,
-                                  ) /
-                                  _duration.inMilliseconds
-                            : 0.0,
-                        onChanged: _seekTo,
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            _formatDuration(_position),
-                            style: const TextStyle(
-                              color: AppTheme.textSecondary,
-                              fontSize: 11,
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12.0,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  _formatDuration(_position),
+                                  style: const TextStyle(
+                                    color: AppTheme.textSecondary,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                                Text(
+                                  _formatDuration(_duration),
+                                  style: const TextStyle(
+                                    color: AppTheme.textSecondary,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          Text(
-                            _formatDuration(_duration),
-                            style: const TextStyle(
+                          const SizedBox(height: 20),
+
+                          // AUDIO CONTROLS SU UNA RIGA SOLA
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.replay_10, size: 32),
+                                onPressed: () => _skip(-10),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: _togglePlayPause,
+                                child: Container(
+                                  width: 70,
+                                  height: 70,
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: _isLoading
+                                      ? const Padding(
+                                          padding: EdgeInsets.all(20.0),
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 3,
+                                          ),
+                                        )
+                                      : Icon(
+                                          _isPlaying
+                                              ? Icons.pause
+                                              : Icons.play_arrow,
+                                          color: Colors.white,
+                                          size: 40,
+                                        ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: const Icon(Icons.forward_10, size: 32),
+                                onPressed: () => _skip(10),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'www.ladyradio.it',
+                            style: TextStyle(
                               color: AppTheme.textSecondary,
-                              fontSize: 11,
+                              fontSize: 10,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 20),
-
-                    // AUDIO CONTROLS SU UNA RIGA SOLA
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.replay_10, size: 32),
-                          onPressed: () => _skip(-10),
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                        ),
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: _togglePlayPause,
-                          child: Container(
-                            width: 70,
-                            height: 70,
-                            decoration: BoxDecoration(
-                              color: AppTheme.primaryColor,
-                              shape: BoxShape.circle,
-                            ),
-                            child: _isLoading
-                                ? const Padding(
-                                    padding: EdgeInsets.all(20.0),
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 3,
-                                    ),
-                                  )
-                                : Icon(
-                                    _isPlaying ? Icons.pause : Icons.play_arrow,
-                                    color: Colors.white,
-                                    size: 40,
-                                  ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.forward_10, size: 32),
-                          onPressed: () => _skip(10),
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'www.ladyradio.it',
-                      style: TextStyle(
-                        color: AppTheme.textSecondary,
-                        fontSize: 10,
-                      ),
-                    ),
                   ],
                 ),
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

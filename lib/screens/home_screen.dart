@@ -580,12 +580,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Material(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.11),
+                    color: AppTheme.primaryColor,
                     shape: const CircleBorder(),
                     child: IconButton(
                       icon: const Icon(
                         Icons.play_arrow_rounded,
-                        color: AppTheme.primaryColor,
+                        color: Colors.white,
                         size: 24,
                       ),
                       padding: EdgeInsets.zero,

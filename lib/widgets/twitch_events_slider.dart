@@ -78,34 +78,7 @@ class _TwitchEventsSliderState extends State<TwitchEventsSlider> {
         }
 
         if (response.scheduled.isEmpty && response.completed.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.only(top: 32),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: _buildHeader(response),
-                ),
-                const SizedBox(height: 14),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: AppTheme.cardDecoration(radius: 18),
-                    child: const Text(
-                      'Nessuna diretta Twitch programmata.',
-                      style: TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
+          return const SizedBox.shrink();
         }
 
         final nextEvent = response.scheduled.isNotEmpty

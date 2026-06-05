@@ -27,11 +27,7 @@ class TwitchEventsResponse {
 
   factory TwitchEventsResponse.fromJson(dynamic json) {
     if (json is List) {
-      final events = json
-          .whereType<Map<String, dynamic>>()
-          .map(TwitchEventModel.fromJson)
-          .where((event) => event.hasDisplayData)
-          .toList();
+      final events = _eventsFrom(json);
       return TwitchEventsResponse(
         channelUrl: '#',
         scheduled: events,
@@ -41,23 +37,26 @@ class TwitchEventsResponse {
 
     if (json is! Map<String, dynamic>) return TwitchEventsResponse.empty();
 
-    final scheduled = (json['scheduled'] is List ? json['scheduled'] : const [])
-        .whereType<Map<String, dynamic>>()
-        .map(TwitchEventModel.fromJson)
-        .where((event) => event.hasDisplayData)
-        .toList();
-
-    final completed = (json['completed'] is List ? json['completed'] : const [])
-        .whereType<Map<String, dynamic>>()
-        .map(TwitchEventModel.fromJson)
-        .where((event) => event.hasDisplayData)
-        .toList();
+    final scheduled = _eventsFrom(json['scheduled']);
+    final completed = _eventsFrom(json['completed']);
 
     return TwitchEventsResponse(
       channelUrl: json['channelUrl']?.toString() ?? '#',
       scheduled: scheduled,
       completed: completed,
     );
+  }
+
+  static List<TwitchEventModel> _eventsFrom(dynamic raw) {
+    if (raw is! List) return const [];
+
+    return raw
+        .whereType<Map>()
+        .map(
+          (item) => TwitchEventModel.fromJson(Map<String, dynamic>.from(item)),
+        )
+        .where((event) => event.hasDisplayData)
+        .toList();
   }
 }
 
@@ -151,7 +150,12 @@ class TwitchService {
         return TwitchEventsResponse.empty();
       }
 
-      return TwitchEventsResponse.fromJson(json.decode(response.body));
+      final decoded = json.decode(utf8.decode(response.bodyBytes));
+      final events = TwitchEventsResponse.fromJson(decoded);
+      debugPrint(
+        'Twitch events fetched: scheduled=${events.scheduled.length}, completed=${events.completed.length}',
+      );
+      return events;
     } on TimeoutException catch (e) {
       debugPrint('Timeout fetch Twitch events: $e');
       return TwitchEventsResponse.empty();
